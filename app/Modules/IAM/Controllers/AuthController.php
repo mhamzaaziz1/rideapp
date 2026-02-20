@@ -47,12 +47,14 @@ class AuthController extends ResourceController
 
         try {
             if (!isset($data['email']) || !isset($data['password'])) {
-                throw new Exception("Email and password are required.");
+                header('Content-Type: application/json');
+                http_response_code(400);
+                echo json_encode(['error' => 'Email and password are required.']);
+                exit;
             }
 
             $token = $this->authService->login($data['email'], $data['password']);
             
-            // Bypass CI4 ResponseTrait which might trigger Locale issues
             header('Content-Type: application/json');
             echo json_encode(['status' => 'success', 'token' => $token]);
             exit;
