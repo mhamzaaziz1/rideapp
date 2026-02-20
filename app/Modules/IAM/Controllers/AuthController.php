@@ -41,6 +41,17 @@ class AuthController extends ResourceController
 
     public function login()
     {
+        // Check database connection first
+        try {
+            $db = \Config\Database::connect();
+            $db->initialize();
+        } catch (\Throwable $e) {
+            header('Content-Type: application/json');
+            http_response_code(500);
+            echo json_encode(['error' => 'Database not connected']);
+            exit;
+        }
+
         // Raw input reading to avoid CI framework filtering issues for now
         $json = file_get_contents('php://input');
         $data = json_decode($json, true);
