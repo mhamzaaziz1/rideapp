@@ -41,6 +41,9 @@
                     <a href="<?= base_url('call-logs') ?>" class="nav-item <?= uri_string() == 'call-logs' ? 'active' : '' ?>">
                         <i data-lucide="phone" class="nav-icon"></i> Call Logs
                     </a>
+                    <a href="<?= base_url('admin/disputes') ?>" class="nav-item <?= uri_string() == 'admin/disputes' ? 'active' : '' ?>">
+                        <i data-lucide="alert-triangle" class="nav-icon"></i> Disputes
+                    </a>
                 </nav>
             </div>
 

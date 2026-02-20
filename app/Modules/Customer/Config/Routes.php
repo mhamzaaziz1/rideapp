@@ -17,6 +17,9 @@ $routes->group('customers', ['namespace' => 'Modules\Customer\Controllers'], fun
     $routes->post('update_status', 'CustomerController::updateStatus');
     $routes->get('profile/(:num)', 'CustomerController::profile/$1');
     $routes->post('add_fund', 'CustomerController::addFund');
+    $routes->get('print_statement/(:num)', 'CustomerController::printStatement/$1');
+    $routes->get('export_statement/(:num)', 'CustomerController::exportStatement/$1');
+    $routes->get('addresses/(:num)', 'CustomerController::getAddresses/$1'); // JSON API for dispatch modal
     
     // Address Management
     $routes->post('address/create', 'CustomerAddressController::create');

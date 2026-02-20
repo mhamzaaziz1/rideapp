@@ -241,6 +241,39 @@
 
         <!-- Right Column -->
         <div>
+            <!-- Associated Dispute Card -->
+            <?php if(isset($dispute) && $dispute): ?>
+            <div class="detail-card" style="border-color: var(--danger); background: rgba(239, 68, 68, 0.02);">
+                <div class="card-header" style="color: var(--danger); border-bottom-color: rgba(239, 68, 68, 0.2);">
+                    <i data-lucide="alert-triangle" width="20"></i> Active Dispute Found
+                </div>
+                <div style="padding: 0.5rem 0;">
+                    <div style="font-weight: 700; font-size: 1.1rem; color: var(--text-primary); margin-bottom: 0.5rem;">#DSP-<?= esc($dispute->id) ?>: <?= esc($dispute->title) ?></div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1rem;">
+                        <span style="font-size:0.85rem; color:var(--text-secondary); background:var(--bg-body); padding:2px 8px; border-radius:12px; border:1px solid var(--border-color);">
+                            <?= esc(ucfirst($dispute->dispute_type)) ?>
+                        </span>
+                        <?php
+                            $statusColors = [
+                                'open' => 'var(--danger)',
+                                'investigating' => 'var(--warning)',
+                                'resolved' => 'var(--success)',
+                                'closed' => 'var(--text-secondary)',
+                            ];
+                            $color = $statusColors[$dispute->status] ?? 'var(--danger)';
+                        ?>
+                        <span style="font-size:0.85rem; font-weight:700; color:<?= $color ?>; text-transform:uppercase;">
+                            <?= ucfirst($dispute->status) ?>
+                        </span>
+                    </div>
+                    
+                    <a href="<?= base_url('admin/disputes/view/'.$dispute->id) ?>" class="btn btn-primary" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        View Dispute Case <i data-lucide="arrow-right" width="16"></i>
+                    </a>
+                </div>
+            </div>
+            <?php endif; ?>
+
             <!-- Customer Info -->
             <div class="detail-card">
                 <div class="card-header">

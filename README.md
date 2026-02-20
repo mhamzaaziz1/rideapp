@@ -1,5 +1,29 @@
-# rideapp
+# RideApp - Fleet & Dispatch Management System
 
+## Recently Developed Features (Feb 2026)
+
+### 🗺️ Advanced Dispatch & Trip Management
+*   **Quick Dispatch with Autocomplete:** A unified modal for admins to rapidly create new trips. Features real-time address autosuggestion powered by Nominatim (OpenStreetMap) and instantly auto-calculates distance, duration, and fare based on vehicle type.
+*   **Dynamic Saved Addresses:** When a customer is selected during dispatch, their saved profile addresses dynamically appear as clickable suggestion "chips" that auto-fill the pickup/dropoff fields and automatically calculate the fare.
+*   **Trip Dispute System:** Dedicated dispute management with categorization (Fare Issue, Driver Behavior, Lost Item, etc.).
+*   **Return/Resolution Trips:** Directly from the dispute dashboard, admins can dispatch a linked "Return Trip" or "Resolution Trip". This uses Mapbox/Nominatim autocomplete and auto-assigns the original driver to easily handle lost items or route redos.
+
+### 💰 Wallet & Financial System
+*   **Customer & Driver Wallets:** Independent digital wallets for users. 
+*   **Dynamic Balance Calculation:** Wallets accurately reflect real-time balances generated on-the-fly (`WalletService`) from all historical ledger transactions (deposits, payouts, trip deductions, earnings) rather than relying on static database columns.
+*   **Printable Wallet Statements:** Standalone, print-ready HTML views for both Customer and Driver financial statements. Includes beautiful headers, summary boxes, and running transaction balances row-by-row.
+*   **CSV Statement Exports:** One-click CSV exports of complete wallet ledgers with proper formatting, headers, and running balances for Excel/accounting software.
+*   **Printable Dispatch Receipts:** Fully formatted, print-ready trip receipts outlining pickup, dropoff, fare breakdown, and company branding.
+*   **Driver Bank Cheque Generation:** Print-ready, MICR-styled physical cheque generation for driver wallet payouts.
+
+### ⚙️ System & Admin Enhancements
+*   **Dynamic App Settings:** Company name, address, tax rate, and other variables are stored in `settings.json` and dynamically injected into all printable receipts, cheques, and statements.
+*   **Driver Commission Rates:** Support for individualized driver commission percentages that automatically split trip fares into company profit and driver earnings.
+*   **AJAX Filtering & Modals:** Dispatch board relies on fast AJAX requests for dispatching, driver assignment, rating submissions, and dispute reporting without full page reloads.
+
+---
+
+## CodeIgniter 4 Application Starter
 ## CodeIgniter 4 Application Starter
 
 ### What is CodeIgniter?

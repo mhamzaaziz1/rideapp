@@ -11,4 +11,7 @@ $routes->group('drivers', ['namespace' => 'Modules\Fleet\Controllers'], function
     $routes->get('profile/(:num)', 'DriversController::profile/$1');
     $routes->post('add_fund', 'DriversController::addFund');
     $routes->post('update_rate', 'DriversController::updateRate');
+    $routes->get('cheque/(:num)', 'DriversController::printCheque/$1');
+    $routes->get('print_statement/(:num)', 'DriversController::printStatement/$1');
+    $routes->get('export_statement/(:num)', 'DriversController::exportStatement/$1');
 });

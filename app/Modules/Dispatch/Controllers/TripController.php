@@ -35,32 +35,42 @@ class TripController extends BaseController
         $trip->generateTripNumber();
         $trip->status = 'pending'; // Default status
 
-        // 1. Get Coordinates (or use NY Mock)
-        if (empty($data['pickup_lat'])) {
+        // 1. Get Coordinates (or use NY Mock if empty)
+        if (empty($data['pickup_lat']) || empty($data['pickup_lng'])) {
             $trip->pickup_lat = 40.7128; // NY
             $trip->pickup_lng = -74.0060;
             $trip->dropoff_lat = 40.6413; // JFK
             $trip->dropoff_lng = -73.7781;
+        } else {
+            $trip->pickup_lat = $data['pickup_lat'];
+            $trip->pickup_lng = $data['pickup_lng'];
+            $trip->dropoff_lat = $data['dropoff_lat'] ?? null;
+            $trip->dropoff_lng = $data['dropoff_lng'] ?? null;
         }
 
-        // 2. Calculate Distance & Duration
-        $distance = $this->pricingService->calculateDistance(
-            $trip->pickup_lat, 
-            $trip->pickup_lng, 
-            $trip->dropoff_lat, 
-            $trip->dropoff_lng
-        );
-        
-        $duration = $this->pricingService->estimateDuration($distance);
-        
-        // 3. Calculate Fare Dynamic
-        // For now, assume 'standard' vehicle type unless passed
+        // 2. Distance, Duration, and Fare
         $vType = $data['vehicle_type'] ?? 'standard';
-        $fare = $this->pricingService->calculateFare($distance, $duration, $vType);
+
+        // Prefer values calculated by the frontend (so what the dispatcher saw is exactly what is saved)
+        if (!empty($data['calculated_fare'])) {
+            $distance = (float)($data['distance_miles'] ?? 0);
+            $duration = (int)($data['duration_minutes'] ?? 0);
+            $fare     = (float)$data['calculated_fare'];
+        } else {
+            // Fallback to server-side estimation
+            $distance = $this->pricingService->calculateDistance(
+                $trip->pickup_lat, 
+                $trip->pickup_lng, 
+                $trip->dropoff_lat, 
+                $trip->dropoff_lng
+            );
+            $duration = $this->pricingService->estimateDuration($distance);
+            $fare     = $this->pricingService->calculateFare($distance, $duration, $vType);
+        }
 
         $trip->distance_miles = $distance;
         $trip->fare_amount = $fare;
-        $trip->duration_minutes = $duration; // Add this field if exists (DB strict check might require ensuring column exists)
+        $trip->duration_minutes = $duration;
         
         
         if ($this->tripModel->save($trip)) {
@@ -136,6 +146,9 @@ class TripController extends BaseController
                 $data['trip_customer_rating'] = $r;
             }
         }
+        
+        $disputeModel = new \Modules\Dispatch\Models\DisputeModel();
+        $data['dispute'] = $disputeModel->where('trip_id', $trip->id)->orderBy('created_at', 'DESC')->first();
         
         return view('Modules\Dispatch\Views\trips\view', $data);
     }
@@ -290,12 +303,31 @@ class TripController extends BaseController
         
         $allTrips = $builder->get()->getResult();
 
+        // 1.5 Fetch Disputes
+        $disputeModel = new \Modules\Dispatch\Models\DisputeModel();
+        $disputes = $disputeModel->findAll();
+        $disputesByTripId = [];
+        $disputesById = [];
+        foreach ($disputes as $d) {
+            $disputesById[$d->id] = $d;
+            if ($d->trip_id) {
+                $disputesByTripId[$d->trip_id] = $d;
+            }
+        }
+
         // 2. bucket them
         $queue = [];
         $active = [];
         $history = [];
 
-        foreach ($allTrips as $t) {
+        foreach ($allTrips as &$t) {
+            $t->dispute = $disputesByTripId[$t->id] ?? null;
+            if ($t->linked_dispute_id && isset($disputesById[$t->linked_dispute_id])) {
+                $t->linked_dispute = $disputesById[$t->linked_dispute_id];
+            } else {
+                $t->linked_dispute = null;
+            }
+
             if (in_array($t->status, ['completed', 'cancelled'])) {
                 $history[] = $t;
             } elseif (in_array($t->status, ['active', 'dispatching'])) {
@@ -368,5 +400,31 @@ class TripController extends BaseController
         }
         
         return view('Modules\Dispatch\Views\trips\index', $data);
+    }
+
+    /**
+     * Print a standalone trip receipt.
+     */
+    public function printTrip(int $id)
+    {
+        $db = \Config\Database::connect();
+
+        $trip = $db->table('trips')
+            ->select('
+                trips.*,
+                customers.first_name as c_first, customers.last_name as c_last, customers.phone as c_phone,
+                drivers.first_name as d_first, drivers.last_name as d_last, drivers.phone as d_phone
+            ')
+            ->join('customers', 'customers.id = trips.customer_id', 'left')
+            ->join('drivers',   'drivers.id   = trips.driver_id',   'left')
+            ->where('trips.id', $id)
+            ->where('trips.deleted_at', null)
+            ->get()->getRow();
+
+        if (!$trip) {
+            return redirect()->to('/dispatch/trips')->with('error', 'Trip not found.');
+        }
+
+        return view('Modules\Dispatch\Views\trips\print', ['trip' => $trip]);
     }
 }

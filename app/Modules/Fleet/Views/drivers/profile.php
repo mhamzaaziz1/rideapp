@@ -194,16 +194,12 @@
                         <i data-lucide="wallet" width="12"></i> Adjust
                     </button>
                 </div>
-                <!-- Calculate net balance from logic or use wallet_balance if it aligns -->
-                <!-- Net Balance = (Card Driver Share) - (Cash Company Share) - Already Paid -->
-                <?php 
-                    $netBalance = $stats['card_payments_due'] - $stats['company_cut_from_cash'] - $stats['already_paid'];
-                    // Or simply use driver->wallet_balance if it was maintained correctly. 
-                    // Let's use the DB wallet balance as the source of truth, but display breakdowns.
-                    $displayBalance = $driver->wallet_balance; 
-                ?>
-                <div class="stat-main-val balance-val-neg">$<?= number_format($displayBalance, 2) ?></div>
-                <div class="stat-sub" style="color:#d97706">
+                <!-- Balance computed by WalletService: card trip earnings - cash commission owed + manual transactions -->
+                <?php $displayBalance = $stats['wallet_balance']; ?>
+                <div class="stat-main-val <?= $displayBalance < 0 ? 'text-danger' : 'text-success' ?>" style="font-size:1.8rem;">
+                    <?= $displayBalance < 0 ? '-' : '' ?>$<?= number_format(abs($displayBalance), 2) ?>
+                </div>
+                <div class="stat-sub" style="color:<?= $displayBalance < 0 ? '#d97706' : 'var(--success)' ?>">
                     <?= $displayBalance < 0 ? 'Driver owes company' : 'Company owes driver' ?>
                 </div>
             </div>
@@ -273,8 +269,8 @@
             <h3 class="h5">Recent Transactions</h3>
             <div style="display:flex; gap:0.5rem;">
                <button onclick="openWalletModal()" class="btn btn-primary"><i data-lucide="dollar-sign" width="16" style="margin-right:6px"></i> Record Payout</button>
-               <button class="btn btn-outline"><i data-lucide="printer" width="16" style="margin-right:6px"></i> Print Check</button>
-               <button class="btn btn-outline"><i data-lucide="download" width="16" style="margin-right:6px"></i> Export</button>
+               <a href="<?= base_url('drivers/print_statement/' . $driver->id) ?>" target="_blank" class="btn btn-outline"><i data-lucide="printer" width="16" style="margin-right:6px"></i> Print Statement</a>
+               <a href="<?= base_url('drivers/export_statement/' . $driver->id) ?>" class="btn btn-outline"><i data-lucide="download" width="16" style="margin-right:6px"></i> Export CSV</a>
             </div>
         </div>
 
@@ -292,6 +288,7 @@
                         <th style="padding:1rem;">Description</th>
                         <th style="padding:1rem;">Date</th>
                         <th style="padding:1rem; text-align:right;">Amount</th>
+                        <th style="padding:1rem; text-align:center;">Cheque</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -301,8 +298,18 @@
                             <td style="padding:1rem;"><span class="status-badge" style="background:var(--bg-surface-hover);"><?= ucfirst($tx['type']) ?></span></td>
                             <td style="padding:1rem;"><?= esc($tx['description']) ?></td>
                             <td style="padding:1rem; color:var(--text-secondary);"><?= date('M d, Y', strtotime($tx['created_at'])) ?></td>
-                            <td style="padding:1rem; text-align:right; font-weight:600; color:<?= $tx['type'] == 'deposit' ? 'var(--success)' : 'var(--danger)' ?>">
-                                $<?= number_format($tx['amount'], 2) ?>
+                            <td style="padding:1rem; text-align:right; font-weight:600; color:<?= in_array($tx['type'], ['deposit','refund']) ? 'var(--success)' : 'var(--danger)' ?>">
+                                <?= in_array($tx['type'], ['deposit','refund']) ? '+' : '-' ?>$<?= number_format($tx['amount'], 2) ?>
+                            </td>
+                            <td style="padding:1rem; text-align:center;">
+                                <?php if ($tx['type'] === 'withdrawal'): ?>
+                                    <a href="<?= base_url('drivers/cheque/' . $tx['id']) ?>" target="_blank"
+                                       style="font-size:0.78rem; color:var(--primary); text-decoration:none; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;">
+                                        🖨 Print
+                                    </a>
+                                <?php else: ?>
+                                    <span style="color:var(--text-secondary);">—</span>
+                                <?php endif; ?>
                             </td>
                         </tr>
                     <?php endforeach; ?>

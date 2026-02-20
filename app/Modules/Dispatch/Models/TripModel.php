@@ -13,7 +13,7 @@ class TripModel extends Model
     protected $returnType       = Trip::class;
     protected $useSoftDeletes   = true;
     protected $allowedFields    = [
-        'trip_number', 'customer_id', 'driver_id', 'status',
+        'trip_number', 'linked_dispute_id', 'customer_id', 'driver_id', 'status',
         'pickup_address', 'dropoff_address', 'pickup_lat', 'pickup_lng', 'dropoff_lat', 'dropoff_lng',
         'distance_miles', 'duration_minutes', 'fare_amount', 'driver_earnings', 'commission_amount', 'surcharge_amount', 'vehicle_type', 'passengers', 'notes',
         'scheduled_at', 'started_at', 'completed_at', 'payment_method'

@@ -265,7 +265,8 @@
             <h3 class="h5">Recent Transactions</h3>
             <div style="display:flex; gap:0.5rem;">
                <button onclick="openWalletModal()" class="btn btn-primary"><i data-lucide="plus" width="16" style="margin-right:6px"></i> Add Funds</button>
-               <button class="btn btn-outline"><i data-lucide="download" width="16" style="margin-right:6px"></i> Export</button>
+               <a href="<?= base_url('customers/print_statement/' . $customer->id) ?>" target="_blank" class="btn btn-outline"><i data-lucide="printer" width="16" style="margin-right:6px"></i> Print Statement</a>
+               <a href="<?= base_url('customers/export_statement/' . $customer->id) ?>" class="btn btn-outline"><i data-lucide="download" width="16" style="margin-right:6px"></i> Export CSV</a>
             </div>
         </div>
 
@@ -292,8 +293,8 @@
                             <td style="padding:1rem;"><span class="status-badge" style="background:var(--bg-surface-hover);"><?= ucfirst($tx['type']) ?></span></td>
                             <td style="padding:1rem;"><?= esc($tx['description']) ?></td>
                             <td style="padding:1rem; color:var(--text-secondary);"><?= date('M d, Y', strtotime($tx['created_at'])) ?></td>
-                            <td style="padding:1rem; text-align:right; font-weight:600; color:<?= $tx['type'] == 'deposit' ? 'var(--success)' : 'var(--danger)' ?>">
-                                <?= $tx['type'] == 'deposit' ? '+' : '-' ?>$<?= number_format($tx['amount'], 2) ?>
+                            <td style="padding:1rem; text-align:right; font-weight:600; color:<?= in_array($tx['type'], ['deposit','refund']) ? 'var(--success)' : 'var(--danger)' ?>">
+                                <?= in_array($tx['type'], ['deposit','refund']) ? '+' : '-' ?>$<?= number_format($tx['amount'], 2) ?>
                             </td>
                         </tr>
                     <?php endforeach; ?>

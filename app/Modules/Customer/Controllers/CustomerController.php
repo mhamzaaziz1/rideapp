@@ -6,6 +6,7 @@ use App\Controllers\BaseController;
 use Modules\Customer\Models\CustomerModel;
 use Modules\Customer\Models\CustomerAddressModel;
 use Modules\Billing\Models\WalletTransactionModel;
+use Modules\Billing\Services\WalletService;
 use Modules\Dispatch\Models\RatingModel;
 use Modules\Customer\Models\CustomerCardModel;
 
@@ -204,12 +205,13 @@ class CustomerController extends BaseController
         $totalTrips = count($completedTrips);
         $avgSpend = $totalTrips > 0 ? $totalSpent / $totalTrips : 0;
         
-        // Calculate Wallet Stats
+        // Calculate Wallet Stats from wallet_transactions (the source of truth)
+        $computedWalletBalance = WalletService::calculateCustomerBalance($id);
         $totalDeposits = 0;
         $totalSpentFromWallet = 0;
         foreach($transactions as $tx) {
-            if($tx['type'] == 'deposit') $totalDeposits += $tx['amount'];
-            if($tx['type'] == 'payment') $totalSpentFromWallet += $tx['amount'];
+            if(in_array($tx['type'], ['deposit', 'refund'])) $totalDeposits += $tx['amount'];
+            if(in_array($tx['type'], ['payment', 'withdrawal'])) $totalSpentFromWallet += $tx['amount'];
         }
 
         // Fetch Cards
@@ -230,7 +232,7 @@ class CustomerController extends BaseController
                 'total_spent' => $totalSpent,
                 'total_trips' => $totalTrips,
                 'avg_spend' => $avgSpend,
-                'wallet_balance' => $customer->wallet_balance,
+                'wallet_balance' => $computedWalletBalance,
                 'total_deposited' => $totalDeposits
             ],
             'title' => $customer->first_name . ' ' . $customer->last_name . ' - Profile'
@@ -263,20 +265,15 @@ class CustomerController extends BaseController
         $db = \Config\Database::connect();
         $db->transStart();
 
-        $newBalance = $customer->wallet_balance + ($type == 'deposit' ? $amount : -$amount);
-
-        // Update Customer Balance
-        $this->customerModel->update($customerId, ['wallet_balance' => $newBalance]);
-
         // Log Transaction
         $txModel = new WalletTransactionModel();
         $txModel->save([
-            'user_type' => 'customer',
-            'user_id' => $customerId,
-            'type' => $type,
-            'amount' => $amount,
+            'user_type'   => 'customer',
+            'user_id'     => $customerId,
+            'type'        => $type,
+            'amount'      => $amount,
             'description' => $description,
-            'created_at' => date('Y-m-d H:i:s')
+            'created_at'  => date('Y-m-d H:i:s')
         ]);
 
         $db->transComplete();
@@ -285,6 +282,135 @@ class CustomerController extends BaseController
             return redirect()->back()->with('error', 'Transaction failed');
         }
 
+        // Sync stored wallet_balance column with computed value
+        WalletService::syncBalance('customer', $customerId);
+
         return redirect()->back()->with('success', 'Wallet updated successfully');
+    }
+
+    /**
+     * JSON API – return a customer's saved addresses for the dispatch modal.
+     */
+    public function getAddresses(int $customerId)
+    {
+        $addrModel = new CustomerAddressModel();
+        $rows = $addrModel->where('customer_id', $customerId)
+                          ->orderBy('is_default', 'DESC')
+                          ->orderBy('type', 'ASC')
+                          ->findAll();
+
+        $addresses = array_map(fn($a) => [
+            'id'         => $a->id,
+            'type'       => $a->type,
+            'address'    => $a->address,
+            'city'       => $a->city,
+            'state'      => $a->state,
+            'zip_code'   => $a->zip_code,
+            'full'       => trim(implode(', ', array_filter([$a->address, $a->city, $a->state, $a->zip_code]))),
+            'is_default' => (bool)$a->is_default,
+            'latitude'   => $a->latitude,
+            'longitude'  => $a->longitude,
+        ], $rows);
+
+        return $this->response->setJSON(['addresses' => $addresses]);
+    }
+
+    /**
+     * Render a printable full wallet statement for a customer.
+     */
+    public function printStatement(int $id)
+    {
+        $customer = $this->customerModel->find($id);
+        if (!$customer) {
+            return redirect()->to('/customers')->with('error', 'Customer not found.');
+        }
+
+        $txModel      = new WalletTransactionModel();
+        $transactions = $txModel->where('user_type', 'customer')
+                                ->where('user_id', $id)
+                                ->orderBy('id', 'DESC')
+                                ->findAll();
+
+        $walletBalance = WalletService::calculateCustomerBalance($id);
+
+        return view('Modules\Customer\Views\statement', [
+            'customer'      => $customer,
+            'transactions'  => $transactions,
+            'walletBalance' => $walletBalance,
+        ]);
+    }
+
+    /**
+     * Stream a CSV export of all customer wallet transactions.
+     */
+    public function exportStatement(int $id)
+    {
+        $customer = $this->customerModel->find($id);
+        if (!$customer) {
+            return redirect()->to('/customers')->with('error', 'Customer not found.');
+        }
+
+        $txModel      = new WalletTransactionModel();
+        $transactions = $txModel->where('user_type', 'customer')
+                                ->where('user_id', $id)
+                                ->orderBy('id', 'ASC')
+                                ->findAll();
+
+        $name     = $customer->first_name . ' ' . $customer->last_name;
+        $filename = 'wallet_statement_' . str_replace(' ', '_', $name) . '_' . date('Ymd') . '.csv';
+
+        header('Content-Type: text/csv; charset=UTF-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+
+        $out = fopen('php://output', 'w');
+        fputs($out, "\xEF\xBB\xBF"); // UTF-8 BOM for Excel
+
+        fputcsv($out, ['Customer Wallet Statement']);
+        fputcsv($out, ['Customer:', $name]);
+        fputcsv($out, ['Account ID:', '#' . $customer->id]);
+        fputcsv($out, ['Phone:', $customer->phone]);
+        fputcsv($out, ['Email:', $customer->email]);
+        fputcsv($out, ['Generated:', date('Y-m-d H:i:s')]);
+        fputcsv($out, []);
+        fputcsv($out, ['#', 'Date', 'Ref', 'Type', 'Description', 'Credit (+)', 'Debit (-)', 'Running Balance']);
+
+        $runningBal = 0.0;
+        $rowNum     = 0;
+
+        foreach ($transactions as $tx) {
+            $rowNum++;
+            $isCredit = in_array($tx['type'], ['deposit', 'refund']);
+            $amount   = (float)$tx['amount'];
+
+            if ($isCredit) {
+                $runningBal += $amount;
+                $credit = number_format($amount, 2);
+                $debit  = '';
+            } else {
+                $runningBal -= $amount;
+                $credit = '';
+                $debit  = number_format($amount, 2);
+            }
+
+            fputcsv($out, [
+                $rowNum,
+                date('Y-m-d', strtotime($tx['created_at'])),
+                'TXN-' . str_pad($tx['id'], 6, '0', STR_PAD_LEFT),
+                ucfirst($tx['type']),
+                $tx['description'] ?? '',
+                $credit,
+                $debit,
+                ($runningBal < 0 ? '-' : '') . number_format(abs($runningBal), 2),
+            ]);
+        }
+
+        fputcsv($out, []);
+        fputcsv($out, ['', '', '', '', 'Closing Balance:', '', '',
+            ($runningBal < 0 ? '-' : '') . number_format(abs($runningBal), 2)]);
+
+        fclose($out);
+        exit;
     }
 }
