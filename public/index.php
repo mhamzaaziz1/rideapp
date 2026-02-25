@@ -1,5 +1,12 @@
 <?php
 
+// --- Installer Check Additions ---
+if (!file_exists(__DIR__ . '/../.env') && !file_exists(__DIR__ . '/install/.installed')) {
+    header('Location: install/index.php');
+    exit;
+}
+// ---------------------------------
+
 use CodeIgniter\Boot;
 use Config\Paths;
 

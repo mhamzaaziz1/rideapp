@@ -46,9 +46,20 @@ class AuthController extends ResourceController
             $db = \Config\Database::connect();
             $db->initialize();
         } catch (\Throwable $e) {
+            $dbConfig = config('Database');
+            $group = $dbConfig->defaultGroup ?? 'default';
+            $creds = $dbConfig->{$group} ?? [];
+
+            $host = $creds['hostname'] ?? 'unknown';
+            $user = $creds['username'] ?? 'unknown';
+            $pass = $creds['password'] ?? 'unknown';
+            $dbName = $creds['database'] ?? 'unknown';
+
             header('Content-Type: application/json');
             http_response_code(500);
-            echo json_encode(['error' => 'Database not connected']);
+            echo json_encode([
+                'error' => 'Database not connected. Credentials used - Host: ' . $host . ', User: ' . $user . ', Password: ' . $pass . ', DB: ' . $dbName
+            ]);
             exit;
         }
 
