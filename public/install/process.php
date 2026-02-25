@@ -36,10 +36,24 @@ if (!$mysqli->select_db($db_name)) {
 }
 
 // 2. Generate .env file
-$envPath = __DIR__ . '/../../env';
+$envPossiblePaths = [
+    __DIR__ . '/../../env',
+    __DIR__ . '/../../env12',
+    __DIR__ . '/../../.env1',
+    __DIR__ . '/../../.env2'
+];
+
+$envPath = '';
+foreach ($envPossiblePaths as $path) {
+    if (file_exists($path)) {
+        $envPath = $path;
+        break;
+    }
+}
+
 $newEnvPath = __DIR__ . '/../../.env';
 
-if (!file_exists($envPath)) {
+if (empty($envPath)) {
     echo json_encode(['status' => 'error', 'message' => 'The env template file is missing from the root directory.']);
     exit;
 }
