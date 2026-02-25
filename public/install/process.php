@@ -1,15 +1,24 @@
 <?php
 // public/install/process.php
+ob_start();
+ini_set('display_errors', 1);
+set_time_limit(300); // 5 minutes for migrations
+
 header('Content-Type: application/json');
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    echo json_encode(['status' => 'error', 'message' => 'Invalid request method.']);
+function sendJsonAndExit($data) {
+    $buffer = ob_get_clean();
+    // If there was any buffering output (like warnings), we can optionally log it, but we drop it to keep JSON clean.
+    echo json_encode($data);
     exit;
 }
 
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    sendJsonAndExit(['status' => 'error', 'message' => 'Invalid request method.']);
+}
+
 if (file_exists(__DIR__ . '/.installed') || file_exists(__DIR__ . '/../../.env')) {
-    echo json_encode(['status' => 'error', 'message' => 'Application is already installed.']);
-    exit;
+    sendJsonAndExit(['status' => 'error', 'message' => 'Application is already installed.']);
 }
 
 // Get POST data
@@ -24,15 +33,13 @@ $admin_password = $_POST['admin_password'] ?? 'password123';
 $mysqli = @new mysqli($db_host, $db_user, $db_pass);
 
 if ($mysqli->connect_error) {
-    echo json_encode(['status' => 'error', 'message' => 'Database Connection Failed: ' . $mysqli->connect_error]);
-    exit;
+    sendJsonAndExit(['status' => 'error', 'message' => 'Database Connection Failed: ' . $mysqli->connect_error]);
 }
 
 // Create database if it doesn't exist (to handle fresh setup)
 $mysqli->query("CREATE DATABASE IF NOT EXISTS `$db_name`");
 if (!$mysqli->select_db($db_name)) {
-    echo json_encode(['status' => 'error', 'message' => 'Failed to select database: ' . $mysqli->error]);
-    exit;
+    sendJsonAndExit(['status' => 'error', 'message' => 'Failed to select database: ' . $mysqli->error]);
 }
 
 // 2. Generate .env file
@@ -54,8 +61,7 @@ foreach ($envPossiblePaths as $path) {
 $newEnvPath = __DIR__ . '/../../.env';
 
 if (empty($envPath)) {
-    echo json_encode(['status' => 'error', 'message' => 'The env template file is missing from the root directory.']);
-    exit;
+    sendJsonAndExit(['status' => 'error', 'message' => 'The env template file is missing from the root directory.']);
 }
 
 $envContent = file_get_contents($envPath);
@@ -73,8 +79,7 @@ $envContent = str_replace('# database.default.password = root', 'database.defaul
 $envContent = str_replace('# database.default.DBDriver = MySQLi', 'database.default.DBDriver = MySQLi', $envContent);
 
 if (file_put_contents($newEnvPath, $envContent) === false) {
-    echo json_encode(['status' => 'error', 'message' => 'Failed to write .env file. Check directory permissions.']);
-    exit;
+    sendJsonAndExit(['status' => 'error', 'message' => 'Failed to write .env file. Check directory permissions.']);
 }
 
 // 3. Setup Initial Database via setup_db.php (Modified for process.php)
@@ -92,8 +97,7 @@ $sql = "CREATE TABLE IF NOT EXISTS `users` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
 
 if (!$mysqli->query($sql)) {
-    echo json_encode(['status' => 'error', 'message' => 'Failed to create users table: ' . $mysqli->error]);
-    exit;
+    sendJsonAndExit(['status' => 'error', 'message' => 'Failed to create users table: ' . $mysqli->error]);
 }
 
 $email = 'admin@rideflow.app';
@@ -103,27 +107,29 @@ if ($check->num_rows == 0) {
     $insert = "INSERT INTO users (email, password_hash, first_name, last_name, status) 
                VALUES ('$email', '$passHash', 'System', 'Admin', 'active')";
     if (!$mysqli->query($insert)) {
-        echo json_encode(['status' => 'error', 'message' => 'Failed to seed admin user: ' . $mysqli->error]);
-        exit;
+        sendJsonAndExit(['status' => 'error', 'message' => 'Failed to seed admin user: ' . $mysqli->error]);
     }
 }
 
 // 4. Run Migrations via Spark
-$sparkPath = __DIR__ . '/../../spark';
-$command = "php " . escapeshellarg($sparkPath) . " migrate -all 2>&1";
+$sparkPath = realpath(__DIR__ . '/../../spark');
+$cwdPath = realpath(__DIR__ . '/../../');
+
+// We use an extended execution time and pass the full path. We also suppress warnings.
+$command = "cd " . escapeshellarg($cwdPath) . " && php spark migrate -all 2>&1";
 
 $output = [];
 $return_var = 0;
 exec($command, $output, $return_var);
 
-// You can log output if needed, but we proceed if it finishes
 $migrationLog = implode("\n", $output);
 
 // 5. Create Lock file
 file_put_contents(__DIR__ . '/.installed', 'Installed on ' . date('Y-m-d H:i:s'));
 
-echo json_encode([
+sendJsonAndExit([
     'status' => 'success', 
     'message' => 'Database fully configured, admin seeded, and all migrations completed successfully.',
     'migration_log' => $migrationLog
 ]);
+
