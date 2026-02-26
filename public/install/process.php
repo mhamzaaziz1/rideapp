@@ -1,17 +1,51 @@
 <?php
 // public/install/process.php
 ob_start();
+error_reporting(E_ALL);
 ini_set('display_errors', 1);
+ini_set('log_errors', 1);
+ini_set('error_log', __DIR__ . '/installer_error.log');
 set_time_limit(300); // 5 minutes for migrations
 
 header('Content-Type: application/json');
 
 function sendJsonAndExit($data) {
     $buffer = ob_get_clean();
-    // If there was any buffering output (like warnings), we can optionally log it, but we drop it to keep JSON clean.
-    echo json_encode($data);
+    if (!empty(trim($buffer))) {
+        error_log("Discarded Output Buffer: " . $buffer);
+    }
+    
+    // Send standard headers
+    header('Content-Type: application/json');
+    $json = json_encode($data, JSON_INVALID_UTF8_SUBSTITUTE | JSON_PARTIAL_OUTPUT_ON_ERROR);
+    
+    if ($json === false) {
+        echo json_encode([
+            'status' => 'error', 
+            'message' => 'Failed to encode JSON response: ' . json_last_error_msg()
+        ]);
+    } else {
+        echo $json;
+    }
     exit;
 }
+
+set_error_handler(function($errno, $errstr, $errfile, $errline) {
+    // Only handle fatal-like or catchable errors, allow others to be buffered/discarded.
+    if (!(error_reporting() & $errno)) return;
+    sendJsonAndExit(['status' => 'error', 'message' => "PHP Error: $errstr in $errfile:$errline"]);
+});
+
+set_exception_handler(function($e) {
+    sendJsonAndExit(['status' => 'error', 'message' => "Exception: " . $e->getMessage()]);
+});
+
+register_shutdown_function(function() {
+    $error = error_get_last();
+    if ($error !== null && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
+        sendJsonAndExit(['status' => 'error', 'message' => "Fatal Error: {$error['message']} in {$error['file']}:{$error['line']}"]);
+    }
+});
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     sendJsonAndExit(['status' => 'error', 'message' => 'Invalid request method.']);

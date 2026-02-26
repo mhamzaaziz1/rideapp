@@ -21,6 +21,60 @@
 *   **Driver Commission Rates:** Support for individualized driver commission percentages that automatically split trip fares into company profit and driver earnings.
 *   **AJAX Filtering & Modals:** Dispatch board relies on fast AJAX requests for dispatching, driver assignment, rating submissions, and dispute reporting without full page reloads.
 
+### 📱 Twilio SMS & Voice CRM Integration
+We have successfully completed the mega update to convert the operational CRM core into a Twilio-powered SMS flow! The system acts as the "brain," routing interactions between Drivers and Customers entirely via text message.
+
+#### 1. Twilio SDK & Environment Setup
+We installed the official Twilio PHP SDK (`twilio/sdk: ^8.0`) so the application can communicate with Twilio APIs to send outbound messages. Placeholders for Twilio credentials (`TWILIO_SID`, `TWILIO_TOKEN`, `TWILIO_NUMBER`) were seamlessly integrated into the `.env` file and a new `Twilio` configuration class.
+
+#### 2. The Twilio Webhook Receiver
+A new CodeIgniter route `POST /api/webhooks/twilio/receive` was created. This endpoint maps to `TwilioWebhookController`. When any user sends a text to your Twilio number, Twilio instantly hits this public endpoint.
+> [!NOTE] 
+> The application uses CodeIgniter's `$routes->group()` with namespace routing under the `Dispatch` module for clean separation boundaries.
+
+#### 3. The CRM Brain: `SmsLogicService`
+This is the core state machine where the magic happens. Here is exactly how the logic flows when a text hits the system:
+
+**Sender Identification & Context Matching**
+The service extracts the 10-digit phone number and intelligently queries the `DriverModel` and `CustomerModel` to figure out who is texting. It then cross-references the `TripModel` to find any "active" rides associated with that user.
+
+**Driver Logic Flow (Action Handling)**
+If the system determines the text is from a **Driver**, it parses command keywords:
+- `ACCEPT`: Searches for the oldest `pending` trip, assigns it to the driver, updates the status to `accepted`, and uses Twilio to text the Customer that their driver is on the way.
+- `ARRIVED`: Changes status to `arrived` and texts the Customer that the driver is outside.
+- `START`: Changes status to `started` and logs `started_at`.
+- `DONE`: Changes status to `completed` and logs `completed_at`.
+- *Proxy:* If the driver sends a regular message (not a command) while on a trip, the CRM masks their number and forwards the text to the Customer automatically.
+
+**Customer Logic Flow**
+If the texts comes from a registered **Customer**:
+- If they have no active trip: The CRM creates a brand new `Trip` record in `pending` state, using the body of the text as the `pickup_address`.
+- If they have an active trip: The CRM masks their number and forwards the message directly to the assigned Driver. 
+- `CANCEL`: Instantly cancels the active ride and alerts the driver.
+
+#### Phase 2: Programmable Voice & IVR Integration
+We extended the CRM logic to support automated voice calls! Users can now call the system's Twilio number, hear an automated menu reflecting their trip status, and perform actions entirely over the phone.
+
+##### 1. Inbound Call Routing
+A new CodeIgniter route `POST /api/webhooks/twilio/voice` handles all incoming calls. When a call comes in, the system determines if the caller is a Driver or a Customer.
+
+##### 2. The Interactive Voice Menus (`VoiceLogicService`)
+Using Twilio's `<Gather>` TwiML verb, the system reads dynamic options using Text-to-Speech:
+- **Drivers** have options to: Press `1` to arrive, `2` to start trip, `3` to complete trip, or `0` to call the Customer.
+- **Customers** have options to: Press `1` to cancel their request, or `0` to call their Driver.
+Each keypress triggers a separate webhook (`/api/webhooks/twilio/voice/gather-driver` or `gather-customer`) which instantly updates the database state just like the SMS flow or the web dashboard.
+
+##### 3. Proxy Calling and Number Privacy
+If either party presses `0`, the system automatically patches the call through to the other party's actual phone number using the TwiML `<Dial>` verb. The critical feature here is that **both parties will only see the main Twilio Business Number on their Caller ID**, keeping personal numbers completely hidden.
+
+#### Code Architecture Overview
+- [NEW] `app/Modules/Dispatch/Controllers/TwilioVoiceController.php` (Voice webhooks logic)
+- [NEW] `app/Modules/Dispatch/Services/VoiceLogicService.php` (TwiML IVR & proxy dial logic)
+- [NEW] `app/Modules/Dispatch/Controllers/TwilioWebhookController.php` (SMS webhooks logic)
+- [NEW] `app/Modules/Dispatch/Services/SmsLogicService.php` (The Brain parser and dispatcher)
+- [NEW] `app/Modules/Dispatch/Services/TwilioService.php` (Outbound SMS sender)
+- [MODIFIED] `app/Modules/Dispatch/Config/Routes.php` (Created the webhook URL hooks)
+- [MODIFIED] `.env` (Added placeholder credentials)
 ---
 
 ## CodeIgniter 4 Application Starter

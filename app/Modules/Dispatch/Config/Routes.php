@@ -45,3 +45,14 @@ $routes->group('api/disputes', ['namespace' => 'Modules\Dispatch\Controllers'], 
 
 // Expose /trips directly as requested
 $routes->get('trips', 'TripController::index', ['namespace' => 'Modules\Dispatch\Controllers']);
+
+$routes->group('api/webhooks', ['namespace' => 'Modules\Dispatch\Controllers'], function ($routes) {
+    // SMS endpoints
+    $routes->post('twilio/receive', 'TwilioWebhookController::receive');
+    
+    // Voice endpoints
+    $routes->post('twilio/voice', 'TwilioVoiceController::inbound');
+    $routes->post('twilio/voice/gather-driver', 'TwilioVoiceController::gatherDriver');
+    $routes->post('twilio/voice/gather-customer', 'TwilioVoiceController::gatherCustomer');
+});
+
