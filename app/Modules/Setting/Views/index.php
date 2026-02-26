@@ -103,6 +103,24 @@
                     <input type="text" class="form-input" name="company_name" value="<?= $settings['company_name'] ?? '' ?>" placeholder="e.g. OMNI-HUB DISTRIBUTION">
                 </div>
 
+                <div class="section-title" style="margin-top: 2rem;">Map Settings</div>
+                
+                <div class="form-group">
+                    <label class="form-label">Map Provider</label>
+                    <select class="form-input" name="map_provider">
+                        <option value="osm" <?= (isset($settings['map_provider']) && $settings['map_provider'] == 'osm') ? 'selected' : '' ?>>OpenStreetMap (Leaflet)</option>
+                        <option value="google" <?= (isset($settings['map_provider']) && $settings['map_provider'] == 'google') ? 'selected' : '' ?>>Google Maps</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Google Maps API Key</label>
+                    <input type="text" class="form-input" name="google_maps_api_key" value="<?= $settings['google_maps_api_key'] ?? '' ?>" placeholder="AIzaSy...">
+                    <div class="form-help">Required if using Google Maps. Optional for OpenStreetMap (only used for address autocomplete).</div>
+                </div>
+
+                <div class="section-title" style="margin-top: 2rem;">Address Information</div>
+
                 <div class="form-group">
                     <label class="form-label">Address</label>
                     <input type="text" class="form-input" name="company_address" value="<?= $settings['company_address'] ?? '' ?>" placeholder="e.g. PLOT NO 11892 CHANDWE MUSONDA">

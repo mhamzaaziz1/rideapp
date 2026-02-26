@@ -408,9 +408,20 @@
     </div>
 </div>
 
-<!-- Leaflet Map -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- Leaflet Map (Only load if OSM) -->
+<script>
+    const mapProvider = window.APP_MAP_PROVIDER || 'osm';
+    if (mapProvider === 'osm') {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+        document.head.appendChild(link);
+        
+        const script = document.createElement('script');
+        script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+        document.head.appendChild(script);
+    }
+</script>
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
@@ -422,48 +433,106 @@
         const dropoffLat = <?= $trip->dropoff_lat ?>;
         const dropoffLng = <?= $trip->dropoff_lng ?>;
 
-        const map = L.map('trip-map').setView([pickupLat, pickupLng], 12);
+        // If coordinates are missing, don't try to render map
+        if (isNaN(pickupLat) || isNaN(dropoffLat)) {
+            document.getElementById('trip-map').innerHTML = '<div style="padding:2rem;text-align:center;color:var(--text-secondary);">Map coordinates unavailable</div>';
+            return;
+        }
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '© OpenStreetMap'
-        }).addTo(map);
+        const checkDependencies = setInterval(() => {
+            if (mapProvider === 'osm' && typeof L === 'undefined') return;
+            if (mapProvider === 'google' && typeof google === 'undefined') return;
+            
+            clearInterval(checkDependencies);
+            renderMap();
+        }, 100);
 
-        // Custom icons
-        const pickupIcon = L.divIcon({
-            html: '<div style="background:#10b981; width:16px; height:16px; border-radius:50%; border:3px solid white; box-shadow:0 2px 6px rgba(0,0,0,0.4);"></div>',
-            className: '',
-            iconSize: [16, 16],
-            iconAnchor: [8, 8]
-        });
+        function renderMap() {
+            if (mapProvider === 'osm') {
+                const map = L.map('trip-map').setView([pickupLat, pickupLng], 12);
 
-        const dropoffIcon = L.divIcon({
-            html: '<div style="background:#ef4444; width:16px; height:16px; border-radius:50%; border:3px solid white; box-shadow:0 2px 6px rgba(0,0,0,0.4);"></div>',
-            className: '',
-            iconSize: [16, 16],
-            iconAnchor: [8, 8]
-        });
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '© OpenStreetMap'
+                }).addTo(map);
 
-        // Add markers
-        L.marker([pickupLat, pickupLng], {icon: pickupIcon})
-            .addTo(map)
-            .bindPopup('<b>Pickup:</b><br><?= addslashes($trip->pickup_address) ?>');
+                // Custom icons
+                const pickupIcon = L.divIcon({
+                    html: '<div style="background:#10b981; width:16px; height:16px; border-radius:50%; border:3px solid white; box-shadow:0 2px 6px rgba(0,0,0,0.4);"></div>',
+                    className: '',
+                    iconSize: [16, 16],
+                    iconAnchor: [8, 8]
+                });
 
-        L.marker([dropoffLat, dropoffLng], {icon: dropoffIcon})
-            .addTo(map)
-            .bindPopup('<b>Dropoff:</b><br><?= addslashes($trip->dropoff_address) ?>');
+                const dropoffIcon = L.divIcon({
+                    html: '<div style="background:#ef4444; width:16px; height:16px; border-radius:50%; border:3px solid white; box-shadow:0 2px 6px rgba(0,0,0,0.4);"></div>',
+                    className: '',
+                    iconSize: [16, 16],
+                    iconAnchor: [8, 8]
+                });
 
-        // Draw route line
-        L.polyline([[pickupLat, pickupLng], [dropoffLat, dropoffLng]], {
-            color: '#3b82f6',
-            weight: 4,
-            opacity: 0.7,
-            dashArray: '10, 10'
-        }).addTo(map);
+                // Add markers
+                L.marker([pickupLat, pickupLng], {icon: pickupIcon})
+                    .addTo(map)
+                    .bindPopup('<b>Pickup:</b><br><?= addslashes((string)$trip->pickup_address) ?>');
 
-        // Fit bounds to show both markers
-        const bounds = L.latLngBounds([[pickupLat, pickupLng], [dropoffLat, dropoffLng]]);
-        map.fitBounds(bounds.pad(0.2));
+                L.marker([dropoffLat, dropoffLng], {icon: dropoffIcon})
+                    .addTo(map)
+                    .bindPopup('<b>Dropoff:</b><br><?= addslashes((string)$trip->dropoff_address) ?>');
+
+                // Draw route line
+                L.polyline([[pickupLat, pickupLng], [dropoffLat, dropoffLng]], {
+                    color: '#3b82f6',
+                    weight: 4,
+                    opacity: 0.7,
+                    dashArray: '10, 10'
+                }).addTo(map);
+
+                // Fit bounds to show both markers
+                const bounds = L.latLngBounds([[pickupLat, pickupLng], [dropoffLat, dropoffLng]]);
+                map.fitBounds(bounds.pad(0.2));
+            } else if (mapProvider === 'google') {
+                const map = new google.maps.Map(document.getElementById('trip-map'), {
+                    center: { lat: pickupLat, lng: pickupLng },
+                    zoom: 12,
+                    disableDefaultUI: true,
+                    zoomControl: true
+                });
+
+                const pinSVGFilled = "M 12,2 C 8.134,2 5,5.134 5,9 c 0,5.25 7,13 7,13 0,0 7,-7.75 7,-13 0,-3.866 -3.134,-7 -7,-7 z";
+                
+                const pickupMarker = new google.maps.Marker({
+                    position: { lat: pickupLat, lng: pickupLng },
+                    map: map,
+                    title: "Pickup: <?= addslashes((string)$trip->pickup_address) ?>",
+                    icon: { path: pinSVGFilled, fillColor: "#10b981", fillOpacity: 1, strokeColor: "#ffffff", strokeWeight: 2, scale: 1.5, anchor: new google.maps.Point(12, 22) }
+                });
+
+                const dropoffMarker = new google.maps.Marker({
+                    position: { lat: dropoffLat, lng: dropoffLng },
+                    map: map,
+                    title: "Dropoff: <?= addslashes((string)$trip->dropoff_address) ?>",
+                    icon: { path: pinSVGFilled, fillColor: "#ef4444", fillOpacity: 1, strokeColor: "#ffffff", strokeWeight: 2, scale: 1.5, anchor: new google.maps.Point(12, 22) }
+                });
+
+                const flightPath = new google.maps.Polyline({
+                    path: [
+                        { lat: pickupLat, lng: pickupLng },
+                        { lat: dropoffLat, lng: dropoffLng }
+                    ],
+                    geodesic: true,
+                    strokeColor: "#3b82f6",
+                    strokeOpacity: 0.8,
+                    strokeWeight: 4
+                });
+                flightPath.setMap(map);
+
+                const bounds = new google.maps.LatLngBounds();
+                bounds.extend({ lat: pickupLat, lng: pickupLng });
+                bounds.extend({ lat: dropoffLat, lng: dropoffLng });
+                map.fitBounds(bounds);
+            }
+        }
     });
 </script>
 

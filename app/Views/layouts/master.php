@@ -207,9 +207,23 @@
             });
         }
     </script>
-    <?php if(getenv('GOOGLE_MAPS_API_KEY')): ?>
-    <script src="https://maps.googleapis.com/maps/api/js?key=<?= getenv('GOOGLE_MAPS_API_KEY') ?>&libraries=places&callback=initAutocomplete" async defer></script>
+    <?php 
+        $settingsFile = WRITEPATH . 'settings.json';
+        $siteSettings = [];
+        if (file_exists($settingsFile)) {
+            $siteSettings = json_decode(file_get_contents($settingsFile), true) ?? [];
+        }
+        $googleMapKey = $siteSettings['google_maps_api_key'] ?? getenv('GOOGLE_MAPS_API_KEY');
+    ?>
+    <?php if($googleMapKey): ?>
+    <script src="https://maps.googleapis.com/maps/api/js?key=<?= $googleMapKey ?>&libraries=places&callback=initAutocomplete" async defer></script>
     <?php endif; ?>
+    
+    <script>
+        // Global Map settings exported for frontend use
+        window.APP_MAP_PROVIDER = '<?= $siteSettings['map_provider'] ?? 'osm' ?>';
+        window.APP_GOOGLE_MAPS_KEY = '<?= $googleMapKey ?>';
+    </script>
     
     <?= $this->renderSection('scripts') ?>
 </body>

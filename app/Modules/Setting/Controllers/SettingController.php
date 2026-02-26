@@ -93,7 +93,7 @@ class SettingController extends BaseController
             $fields = [
                 'company_name', 'company_address', 'company_city', 
                 'company_state', 'company_country_code', 'company_zip_code', 
-                'company_phone', 'company_vat'
+                'company_phone', 'company_vat', 'map_provider', 'google_maps_api_key'
             ];
             
             foreach ($fields as $field) {

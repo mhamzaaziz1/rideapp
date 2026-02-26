@@ -17,6 +17,7 @@
 *   **Driver Bank Cheque Generation:** Print-ready, MICR-styled physical cheque generation for driver wallet payouts.
 
 ### ⚙️ System & Admin Enhancements
+*   **Google Maps Integration:** As an alternative to OpenStreetMap, the system now natively supports Google Maps via an API Key configuration in the Settings module. When enabled, dispatch and trip views dynamically render interactive Google Maps with real-time Traffic Layer overlays, custom SVG markers, and rich POI styling directly into the CRM.
 *   **Dynamic App Settings:** Company name, address, tax rate, and other variables are stored in `settings.json` and dynamically injected into all printable receipts, cheques, and statements.
 *   **Driver Commission Rates:** Support for individualized driver commission percentages that automatically split trip fares into company profit and driver earnings.
 *   **AJAX Filtering & Modals:** Dispatch board relies on fast AJAX requests for dispatching, driver assignment, rating submissions, and dispute reporting without full page reloads.

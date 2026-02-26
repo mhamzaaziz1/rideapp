@@ -231,14 +231,29 @@
             </div>
             <div class="panel-body" style="padding:0;">
                 
-                <!-- Leaflet CSS & JS -->
-                <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-                <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+                <?php if (!isset($siteSettings)) {
+                    $settingsFile = WRITEPATH . 'settings.json';
+                    $siteSettings = [];
+                    if (file_exists($settingsFile)) {
+                        $siteSettings = json_decode(file_get_contents($settingsFile), true) ?? [];
+                    }
+                }
+                $mapProvider = $siteSettings['map_provider'] ?? 'osm';
+                ?>
+                
+                <?php if ($mapProvider === 'osm'): ?>
+                    <!-- Leaflet CSS & JS -->
+                    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+                    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+                <?php endif; ?>
                 
                 <style>
                     #map { height: 100%; width: 100%; background: #f0f0f0; }
                     .leaflet-popup-content-wrapper { border-radius: 4px; font-size: 0.8rem; }
                     .leaflet-popup-content { margin: 8px; }
+                    /* Google Maps Custom Styles */
+                    .gm-style .gm-style-iw-c { padding: 0 !important; border-radius: var(--radius-sm); }
+                    .gm-style .gm-style-iw-d { padding: 10px !important; overflow: hidden !important; }
                 </style>
 
                 <div id="map" class="route-map-placeholder" style="background:none;"></div>
@@ -276,18 +291,29 @@
 
 <script>
     let map, tripLayer;
-    const pickupIcon = L.divIcon({
-        html: '<div style="background:var(--success); width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow:0 2px 4px rgba(0,0,0,0.3);"></div>',
-        className: 'custom-div-icon',
-        iconSize: [12, 12],
-        iconAnchor: [6, 6]
-    });
-    const dropoffIcon = L.divIcon({
-        html: '<div style="background:var(--danger); width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow:0 2px 4px rgba(0,0,0,0.3);"></div>',
-        className: 'custom-div-icon',
-        iconSize: [12, 12],
-        iconAnchor: [6, 6]
-    });
+    let mapProvider = window.APP_MAP_PROVIDER || 'osm';
+    
+    // Leaflet specific
+    let pickupIcon, dropoffIcon;
+    if (mapProvider === 'osm' && typeof L !== 'undefined') {
+        pickupIcon = L.divIcon({
+            html: '<div style="background:var(--success); width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow:0 2px 4px rgba(0,0,0,0.3);"></div>',
+            className: 'custom-div-icon',
+            iconSize: [12, 12],
+            iconAnchor: [6, 6]
+        });
+        dropoffIcon = L.divIcon({
+            html: '<div style="background:var(--danger); width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow:0 2px 4px rgba(0,0,0,0.3);"></div>',
+            className: 'custom-div-icon',
+            iconSize: [12, 12],
+            iconAnchor: [6, 6]
+        });
+    }
+
+    // Google Maps specific
+    let gMapMarkers = [];
+    let gMapPolyline = null;
+    let gMapTrafficLayer = null;
 
     // Variables to store coordinates
     let pickupCoords = { lat: 40.7128, lng: -74.0060 };
@@ -358,66 +384,135 @@
             }
         }
 
-        // --- Leaflet Map Init ---
-        map = L.map('map', { zoomControl: false }).setView([40.7128, -74.0060], 11);
-        
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; OpenStreetMap &copy; CARTO',
-            subdomains: 'abcd',
-            maxZoom: 20
-        }).addTo(map);
+        // --- Map Init ---
+        if (mapProvider === 'osm') {
+            // Leaflet Map Init
+            map = L.map('map', { zoomControl: false }).setView([40.7128, -74.0060], 11);
+            
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; OpenStreetMap &copy; CARTO',
+                subdomains: 'abcd',
+                maxZoom: 20
+            }).addTo(map);
 
-        tripLayer = L.featureGroup().addTo(map);
+            tripLayer = L.featureGroup().addTo(map);
 
-        // Traffic Layer (TomTom Traffic Flow Tile Layer - free alternative)
-        let trafficLayer = null;
-        let trafficEnabled = false;
+            // Traffic Layer (TomTom Traffic Flow Tile Layer - free alternative)
+            let trafficLayer = null;
+            let trafficEnabled = false;
 
-        const btnTraffic = document.getElementById('btn-traffic');
-        if(btnTraffic) {
-            btnTraffic.addEventListener('click', () => {
-                trafficEnabled = !trafficEnabled;
-                
-                if(trafficEnabled) {
-                    // Add traffic layer overlay
-                    trafficLayer = L.tileLayer('https://{s}.tile.thunderforest.com/transport/{z}/{x}/{y}.png?apikey=placeholder', {
-                        attribution: 'Traffic Data',
-                        opacity: 0.6,
-                        maxZoom: 18
-                    }).addTo(map);
+            const btnTraffic = document.getElementById('btn-traffic');
+            if(btnTraffic) {
+                btnTraffic.addEventListener('click', () => {
+                    trafficEnabled = !trafficEnabled;
                     
-                    // Update button style
-                    btnTraffic.style.background = 'var(--success)';
-                    btnTraffic.innerHTML = '<i data-lucide="traffic-cone" width="12"></i> Traffic On';
-                    lucide.createIcons();
-                    
-                    // Show traffic info popup
-                    showTrafficInfo();
-                } else {
-                    // Remove traffic layer
-                    if(trafficLayer) {
-                        map.removeLayer(trafficLayer);
-                        trafficLayer = null;
+                    if(trafficEnabled) {
+                        // Add traffic layer overlay
+                        trafficLayer = L.tileLayer('https://{s}.tile.thunderforest.com/transport/{z}/{x}/{y}.png?apikey=placeholder', {
+                            attribution: 'Traffic Data',
+                            opacity: 0.6,
+                            maxZoom: 18
+                        }).addTo(map);
+                        
+                        // Update button style
+                        btnTraffic.style.background = 'var(--success)';
+                        btnTraffic.innerHTML = '<i data-lucide="traffic-cone" width="12"></i> Traffic On';
+                        lucide.createIcons();
+                        
+                        // Show traffic info popup
+                        showTrafficInfoLeaflet();
+                    } else {
+                        // Remove traffic layer
+                        if(trafficLayer) {
+                            map.removeLayer(trafficLayer);
+                            trafficLayer = null;
+                        }
+                        
+                        // Restore button
+                        btnTraffic.style.background = '';
+                        btnTraffic.innerHTML = '<i data-lucide="traffic-cone" width="12"></i> Traffic';
+                        lucide.createIcons();
                     }
-                    
-                    // Restore button
-                    btnTraffic.style.background = '';
-                    btnTraffic.innerHTML = '<i data-lucide="traffic-cone" width="12"></i> Traffic';
-                    lucide.createIcons();
-                }
+                });
+            }
+
+            function showTrafficInfoLeaflet() {
+                const html = buildTrafficHtml();
+                L.popup({ closeButton: true, autoClose: false })
+                    .setLatLng([40.7128, -74.0060])
+                    .setContent(html)
+                    .openOn(map);
+                setTimeout(() => lucide.createIcons(), 100);
+            }
+        } else if (mapProvider === 'google' && typeof google !== 'undefined') {
+            // Google Maps Init
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: { lat: 40.7128, lng: -74.0060 },
+                zoom: 11,
+                disableDefaultUI: true,
+                zoomControl: true,
+                styles: [
+                    { "elementType": "geometry", "stylers": [{ "color": "#f5f5f5" }] },
+                    { "elementType": "labels.icon", "stylers": [{ "visibility": "off" }] },
+                    { "elementType": "labels.text.fill", "stylers": [{ "color": "#616161" }] },
+                    { "elementType": "labels.text.stroke", "stylers": [{ "color": "#f5f5f5" }] },
+                    { "featureType": "administrative.land_parcel", "elementType": "labels.text.fill", "stylers": [{ "color": "#bdbdbd" }] },
+                    { "featureType": "poi", "elementType": "geometry", "stylers": [{ "color": "#eeeeee" }] },
+                    { "featureType": "poi", "elementType": "labels.text.fill", "stylers": [{ "color": "#757575" }] },
+                    { "featureType": "poi.park", "elementType": "geometry", "stylers": [{ "color": "#e5e5e5" }] },
+                    { "featureType": "poi.park", "elementType": "labels.text.fill", "stylers": [{ "color": "#9e9e9e" }] },
+                    { "featureType": "road", "elementType": "geometry", "stylers": [{ "color": "#ffffff" }] },
+                    { "featureType": "road.arterial", "elementType": "labels.text.fill", "stylers": [{ "color": "#757575" }] },
+                    { "featureType": "road.highway", "elementType": "geometry", "stylers": [{ "color": "#dadada" }] },
+                    { "featureType": "road.highway", "elementType": "labels.text.fill", "stylers": [{ "color": "#616161" }] },
+                    { "featureType": "road.local", "elementType": "labels.text.fill", "stylers": [{ "color": "#9e9e9e" }] },
+                    { "featureType": "transit.line", "elementType": "geometry", "stylers": [{ "color": "#e5e5e5" }] },
+                    { "featureType": "transit.station", "elementType": "geometry", "stylers": [{ "color": "#eeeeee" }] },
+                    { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#c9c9c9" }] },
+                    { "featureType": "water", "elementType": "labels.text.fill", "stylers": [{ "color": "#9e9e9e" }] }
+                ]
             });
+
+            gMapTrafficLayer = new google.maps.TrafficLayer();
+            let trafficEnabled = false;
+
+            const btnTraffic = document.getElementById('btn-traffic');
+            if(btnTraffic) {
+                btnTraffic.addEventListener('click', () => {
+                    trafficEnabled = !trafficEnabled;
+                    if(trafficEnabled) {
+                        gMapTrafficLayer.setMap(map);
+                        btnTraffic.style.background = 'var(--success)';
+                        btnTraffic.innerHTML = '<i data-lucide="traffic-cone" width="12"></i> Traffic On';
+                        lucide.createIcons();
+                        showTrafficInfoGoogle();
+                    } else {
+                        gMapTrafficLayer.setMap(null);
+                        btnTraffic.style.background = '';
+                        btnTraffic.innerHTML = '<i data-lucide="traffic-cone" width="12"></i> Traffic';
+                        lucide.createIcons();
+                    }
+                });
+            }
+
+            function showTrafficInfoGoogle() {
+                const infoWindow = new google.maps.InfoWindow({
+                    content: buildTrafficHtml(),
+                    position: { lat: 40.7128, lng: -74.0060 }
+                });
+                infoWindow.open(map);
+                setTimeout(() => lucide.createIcons(), 100);
+            }
         }
 
-        // Traffic Info Display
-        function showTrafficInfo() {
-            // Mock traffic data - in production, fetch from Google Maps Traffic API or similar
+        function buildTrafficHtml() {
             const trafficData = [
                 { area: 'Downtown', status: 'Heavy', color: 'var(--danger)', delay: '+15 min' },
                 { area: 'Highway I-95', status: 'Moderate', color: 'var(--warning)', delay: '+8 min' },
                 { area: 'Airport Route', status: 'Light', color: 'var(--success)', delay: '+2 min' }
             ];
 
-            let html = '<div style="padding:1rem; background:var(--bg-surface); border-radius:var(--radius-sm); margin:1rem; max-width:300px;">';
+            let html = '<div style="padding:1rem; background:var(--bg-surface); border-radius:var(--radius-sm); max-width:300px;">';
             html += '<h4 style="margin:0 0 0.75rem 0; font-size:0.9rem; font-weight:700; display:flex; align-items:center; gap:0.5rem;"><i data-lucide="traffic-cone" width="16"></i> Current Traffic</h4>';
             
             trafficData.forEach(t => {
@@ -431,15 +526,7 @@
             });
             
             html += '</div>';
-            
-            // Create popup on map
-            L.popup({ closeButton: true, autoClose: false })
-                .setLatLng([40.7128, -74.0060])
-                .setContent(html)
-                .openOn(map);
-            
-            // Re-init icons in popup
-            setTimeout(() => lucide.createIcons(), 100);
+            return html;
         }
 
         // Dispatch Button Logic
@@ -570,31 +657,68 @@
         document.getElementById('lbl-dur').innerText = t.duration_minutes;
 
         // 4. Update Map
-        tripLayer.clearLayers();
-        
         const lat1 = parseFloat(t.pickup_lat);
         const lng1 = parseFloat(t.pickup_lng);
         const lat2 = parseFloat(t.dropoff_lat);
         const lng2 = parseFloat(t.dropoff_lng);
 
         if(!isNaN(lat1) && !isNaN(lat2)) {
-            const p1 = [lat1, lng1];
-            const p2 = [lat2, lng2];
+            const p1 = { lat: lat1, lng: lng1 };
+            const p2 = { lat: lat2, lng: lng2 };
 
-            L.marker(p1, {icon: pickupIcon}).addTo(tripLayer).bindPopup("Pickup: " + t.pickup_address);
-            L.marker(p2, {icon: dropoffIcon}).addTo(tripLayer).bindPopup("Dropoff: " + t.dropoff_address);
-            
-            L.polyline([p1, p2], {
-                color: 'var(--primary)',
-                weight: 4,
-                opacity: 0.8,
-                dashArray: '10, 10'
-            }).addTo(tripLayer);
-            
-            map.fitBounds(L.latLngBounds(p1, p2).pad(0.2));
-            
-            // Invalidate size to ensure map renders correctly if hidden previously
-            map.invalidateSize();
+            if (mapProvider === 'osm') {
+                tripLayer.clearLayers();
+                L.marker([lat1, lng1], {icon: pickupIcon}).addTo(tripLayer).bindPopup("Pickup: " + t.pickup_address);
+                L.marker([lat2, lng2], {icon: dropoffIcon}).addTo(tripLayer).bindPopup("Dropoff: " + t.dropoff_address);
+                
+                L.polyline([[lat1, lng1], [lat2, lng2]], {
+                    color: 'var(--primary)',
+                    weight: 4,
+                    opacity: 0.8,
+                    dashArray: '10, 10'
+                }).addTo(tripLayer);
+                
+                map.fitBounds(L.latLngBounds([lat1, lng1], [lat2, lng2]).pad(0.2));
+                map.invalidateSize();
+            } else if (mapProvider === 'google' && typeof google !== 'undefined') {
+                // Clear existing GMaps markers
+                gMapMarkers.forEach(m => m.setMap(null));
+                gMapMarkers = [];
+                if (gMapPolyline) gMapPolyline.setMap(null);
+
+                // Add Google Maps SVG Icons
+                const pinSVGFilled = "M 12,2 C 8.134,2 5,5.134 5,9 c 0,5.25 7,13 7,13 0,0 7,-7.75 7,-13 0,-3.866 -3.134,-7 -7,-7 z";
+                
+                const pickupMarker = new google.maps.Marker({
+                    position: p1,
+                    map: map,
+                    title: "Pickup: " + t.pickup_address,
+                    icon: { path: pinSVGFilled, fillColor: "#10b981", fillOpacity: 1, strokeColor: "#ffffff", strokeWeight: 2, scale: 1.2, anchor: new google.maps.Point(12, 22) }
+                });
+                const dropoffMarker = new google.maps.Marker({
+                    position: p2,
+                    map: map,
+                    title: "Dropoff: " + t.dropoff_address,
+                    icon: { path: pinSVGFilled, fillColor: "#ef4444", fillOpacity: 1, strokeColor: "#ffffff", strokeWeight: 2, scale: 1.2, anchor: new google.maps.Point(12, 22) }
+                });
+
+                gMapMarkers.push(pickupMarker, dropoffMarker);
+
+                // Add Polyline
+                gMapPolyline = new google.maps.Polyline({
+                    path: [p1, p2],
+                    geodesic: true,
+                    strokeColor: "#6366f1",
+                    strokeOpacity: 0.8,
+                    strokeWeight: 4
+                });
+                gMapPolyline.setMap(map);
+
+                const bounds = new google.maps.LatLngBounds();
+                bounds.extend(p1);
+                bounds.extend(p2);
+                map.fitBounds(bounds);
+            }
         }
     }
 </script>
