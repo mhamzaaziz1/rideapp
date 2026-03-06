@@ -36,7 +36,10 @@ $routes->group('admin/disputes', ['namespace' => 'Modules\Dispatch\Controllers']
     $routes->get('edit/(:num)', 'DisputeController::edit/$1');
     $routes->post('update_details/(:num)', 'DisputeController::updateDetails/$1');
     $routes->get('delete/(:num)', 'DisputeController::delete/$1');
-    $routes->post('arrange_return_trip/(:num)', 'DisputeController::arrangeReturnTrip/$1');
+});
+
+$routes->group('admin/communications', ['namespace' => 'Modules\Dispatch\Controllers'], function ($routes) {
+    $routes->get('/', 'CommunicationController::index');
 });
 
 $routes->group('api/disputes', ['namespace' => 'Modules\Dispatch\Controllers'], function ($routes) {

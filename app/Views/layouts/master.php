@@ -41,6 +41,9 @@
                     <a href="<?= base_url('call-logs') ?>" class="nav-item <?= uri_string() == 'call-logs' ? 'active' : '' ?>">
                         <i data-lucide="phone" class="nav-icon"></i> Call Logs
                     </a>
+                    <a href="<?= base_url('admin/communications') ?>" class="nav-item <?= uri_string() == 'admin/communications' ? 'active' : '' ?>">
+                        <i data-lucide="message-square" class="nav-icon"></i> Communications
+                    </a>
                     <a href="<?= base_url('admin/disputes') ?>" class="nav-item <?= uri_string() == 'admin/disputes' ? 'active' : '' ?>">
                         <i data-lucide="alert-triangle" class="nav-icon"></i> Disputes
                     </a>

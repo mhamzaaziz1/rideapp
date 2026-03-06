@@ -68,13 +68,30 @@ Each keypress triggers a separate webhook (`/api/webhooks/twilio/voice/gather-dr
 ##### 3. Proxy Calling and Number Privacy
 If either party presses `0`, the system automatically patches the call through to the other party's actual phone number using the TwiML `<Dial>` verb. The critical feature here is that **both parties will only see the main Twilio Business Number on their Caller ID**, keeping personal numbers completely hidden.
 
+#### Phase 3: Communication Management Center
+To give administrators full visibility into the automated system, we built a centralized dashboard to track every interaction.
+
+##### 1. Database Logging (`communication_logs` Table)
+A new migration was created to store a detailed history of every SMS and Voice call including direction (inbound vs outbound), type (sms or voice), phone numbers, and the system reaction.
+
+##### 2. Service-Level Hooks
+We injected the `CommunicationLogModel` directly into `SmsLogicService`, `VoiceLogicService`, and `TwilioService` to record all interactions.
+
+##### 3. The Dashboard UI
+A new dashboard was added to the main left navigation under **Communications**, utilizing a custom CSS Grid "Card" layout. It translates raw phone numbers into the actual Driver or Customer names directly in the view, complete with color-coded badges for easy reading.
+
 #### Code Architecture Overview
+- [NEW] `app/Modules/Dispatch/Controllers/CommunicationController.php` (Dashboard view logic)
+- [NEW] `app/Modules/Dispatch/Views/communications/index.php` (Card-based UI grid)
+- [NEW] `app/Modules/Dispatch/Models/CommunicationLogModel.php` (Database logging model)
+- [NEW] `app/Modules/Dispatch/Entities/CommunicationLog.php` (Entity representing a log)
 - [NEW] `app/Modules/Dispatch/Controllers/TwilioVoiceController.php` (Voice webhooks logic)
 - [NEW] `app/Modules/Dispatch/Services/VoiceLogicService.php` (TwiML IVR & proxy dial logic)
 - [NEW] `app/Modules/Dispatch/Controllers/TwilioWebhookController.php` (SMS webhooks logic)
 - [NEW] `app/Modules/Dispatch/Services/SmsLogicService.php` (The Brain parser and dispatcher)
 - [NEW] `app/Modules/Dispatch/Services/TwilioService.php` (Outbound SMS sender)
-- [MODIFIED] `app/Modules/Dispatch/Config/Routes.php` (Created the webhook URL hooks)
+- [MODIFIED] `app/Modules/Dispatch/Config/Routes.php` (Created the webhook URL hooks and dashboard routes)
+- [MODIFIED] `app/Views/layouts/master.php` (Added sidebar link)
 - [MODIFIED] `.env` (Added placeholder credentials)
 ---
 

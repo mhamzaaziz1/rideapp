@@ -7,6 +7,7 @@ use Modules\Customer\Models\CustomerModel;
 use Modules\Dispatch\Models\TripModel;
 use Twilio\TwiML\VoiceResponse;
 use Config\Twilio;
+use Modules\Dispatch\Models\CommunicationLogModel;
 
 class VoiceLogicService
 {
@@ -14,6 +15,7 @@ class VoiceLogicService
     protected $customerModel;
     protected $tripModel;
     protected $twilioNumber;
+    protected $logModel;
 
     public function __construct()
     {
@@ -23,6 +25,7 @@ class VoiceLogicService
         
         $config = new Twilio();
         $this->twilioNumber = $config->number;
+        $this->logModel = new CommunicationLogModel();
     }
 
     /**
@@ -32,22 +35,46 @@ class VoiceLogicService
     {
         $cleanPhone = substr(preg_replace('/[^0-9]/', '', $from), -10);
         $response = new VoiceResponse();
+        $userType = 'unknown';
+        $userId = null;
+        $action = '';
+        $twiMl = '';
 
         // Check if Caller is Driver
         $driver = $this->driverModel->like('phone', $cleanPhone, 'before')->first();
         if ($driver) {
-            return $this->buildDriverMenu($driver, $response);
+            $userType = 'driver';
+            $userId = $driver->id;
+            $twiMl = $this->buildDriverMenu($driver, $response);
+            $action = 'Provided Driver Voice Menu';
+        } else {
+            // Check if Caller is Customer
+            $customer = $this->customerModel->like('phone', $cleanPhone, 'before')->first();
+            if ($customer) {
+                $userType = 'customer';
+                $userId = $customer->id;
+                $twiMl = $this->buildCustomerMenu($customer, $response);
+                $action = 'Provided Customer Voice Menu';
+            } else {
+                // Unknown Caller
+                $response->say("Welcome to RideApp! Looks like your number isn't registered yet. Head to our website to sign up.");
+                $twiMl = $response->asXML();
+                $action = 'Provided Unknown Caller Greeting';
+            }
         }
 
-        // Check if Caller is Customer
-        $customer = $this->customerModel->like('phone', $cleanPhone, 'before')->first();
-        if ($customer) {
-            return $this->buildCustomerMenu($customer, $response);
-        }
+        $this->logModel->insert([
+            'type' => 'voice',
+            'direction' => 'inbound',
+            'from_number' => $from,
+            'to_number' => $this->twilioNumber,
+            'user_type' => $userType,
+            'user_id' => $userId,
+            'content' => 'Initial Call Setup',
+            'action_taken' => $action
+        ]);
 
-        // Unknown Caller
-        $response->say("Welcome to RideApp! Looks like your number isn't registered yet. Head to our website to sign up.");
-        return $response->asXML();
+        return $twiMl;
     }
 
     /**
@@ -135,6 +162,7 @@ class VoiceLogicService
 
         if (!$driver) {
              $response->say("Error detecting caller.");
+             $this->logVoiceAction($from, 'driver', null, $digits, 'Error detecting caller');
              return $response->asXML();
         }
 
@@ -145,9 +173,11 @@ class VoiceLogicService
 
         if (!$activeTrip) {
              $response->say("You do not have a valid active trip to perform this action.");
+             $this->logVoiceAction($from, 'driver', $driver->id, $digits, 'No valid active trip');
              return $response->asXML();
         }
 
+        $actionTaken = '';
         // Perform Action based on keypress
         switch ($digits) {
             case '1':
@@ -155,24 +185,30 @@ class VoiceLogicService
                     $this->tripModel->update($activeTrip->id, ['status' => 'arrived']);
                     $response->say("Status updated to arrived.");
                     $this->notifyCustomerViaSms($activeTrip->customer_id, "Your driver has arrived outside.");
+                    $actionTaken = 'Updated trip to Arrived';
                 } else {
                      $response->say("Invalid command for current trip state.");
+                     $actionTaken = 'Invalid status command';
                 }
                 break;
             case '2':
                 if ($activeTrip->status === 'arrived') {
                     $this->tripModel->update($activeTrip->id, ['status' => 'started', 'started_at' => date('Y-m-d H:i:s')]);
                     $response->say("Status updated to started. Have a safe trip.");
+                    $actionTaken = 'Updated trip to Started';
                 } else {
                      $response->say("Invalid command for current trip state.");
+                     $actionTaken = 'Invalid status command';
                 }
                 break;
             case '3':
                 if ($activeTrip->status === 'started') {
                     $this->tripModel->update($activeTrip->id, ['status' => 'completed', 'completed_at' => date('Y-m-d H:i:s')]);
                     $response->say("Trip completed successfully. Goodbye.");
+                    $actionTaken = 'Updated trip to Completed';
                 } else {
                     $response->say("Invalid command for current trip state.");
+                    $actionTaken = 'Invalid status command';
                 }
                 break;
             case '0':
@@ -182,15 +218,20 @@ class VoiceLogicService
                     $response->say("Connecting you to the customer now. Please hold.");
                     $dial = $response->dial('', ['callerId' => $this->twilioNumber]);
                     $dial->number($customer->phone);
+                    $actionTaken = 'Proxy called customer';
                 } else {
                     $response->say("Could not find the customer's phone number.");
+                    $actionTaken = 'Failed customer proxy call';
                 }
+                $this->logVoiceAction($from, 'driver', $driver->id, $digits, $actionTaken);
                 return $response->asXML(); // Return early so we don't say "Goodbye"
             default:
                 $response->say("Invalid selection.");
+                $actionTaken = 'Invalid selection';
         }
 
         $response->say("Goodbye.");
+        $this->logVoiceAction($from, 'driver', $driver->id, $digits, $actionTaken);
         return $response->asXML();
     }
 
@@ -205,6 +246,7 @@ class VoiceLogicService
 
         if (!$customer) {
              $response->say("Error detecting caller.");
+             $this->logVoiceAction($from, 'customer', null, $digits, 'Error detecting caller');
              return $response->asXML();
         }
 
@@ -215,9 +257,11 @@ class VoiceLogicService
 
         if (!$activeTrip) {
              $response->say("You do not have a valid active trip.");
+             $this->logVoiceAction($from, 'customer', $customer->id, $digits, 'No valid active trip');
              return $response->asXML();
         }
 
+        $actionTaken = '';
         switch ($digits) {
             case '1':
                 // Cancel Trip
@@ -226,6 +270,7 @@ class VoiceLogicService
                     $this->notifyDriverViaSms($activeTrip->driver_id, "Alert: Trip {$activeTrip->trip_number} was cancelled by the customer.");
                 }
                 $response->say("Your trip has been cancelled. Goodbye.");
+                $actionTaken = 'Cancelled Trip';
                 break;
             case '0':
                 // Proxy Call to Driver
@@ -235,16 +280,34 @@ class VoiceLogicService
                          $response->say("Connecting you to your driver now. Please hold.");
                          $dial = $response->dial('', ['callerId' => $this->twilioNumber]);
                          $dial->number($driver->phone);
+                         $this->logVoiceAction($from, 'customer', $customer->id, $digits, 'Proxy called driver');
                          return $response->asXML(); // Return early
                      }
                 }
                 $response->say("No driver is assigned yet to proxy connect.");
+                $actionTaken = 'Failed driver proxy call';
                 break;
             default:
                 $response->say("Invalid selection.");
+                $actionTaken = 'Invalid selection';
         }
 
+        $this->logVoiceAction($from, 'customer', $customer->id, $digits, $actionTaken);
         return $response->asXML();
+    }
+
+    private function logVoiceAction($from, $userType, $userId, $digits, $action)
+    {
+        $this->logModel->insert([
+            'type' => 'voice',
+            'direction' => 'inbound',
+            'from_number' => $from,
+            'to_number' => $this->twilioNumber,
+            'user_type' => $userType,
+            'user_id' => $userId,
+            'content' => 'Keypad Input: ' . $digits,
+            'action_taken' => $action
+        ]);
     }
 
     /**

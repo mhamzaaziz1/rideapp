@@ -5,6 +5,7 @@ namespace Modules\Dispatch\Services;
 use Modules\Fleet\Models\DriverModel;
 use Modules\Customer\Models\CustomerModel;
 use Modules\Dispatch\Models\TripModel;
+use Modules\Dispatch\Models\CommunicationLogModel;
 
 class SmsLogicService
 {
@@ -12,6 +13,7 @@ class SmsLogicService
     protected $customerModel;
     protected $tripModel;
     protected $twilioService;
+    protected $logModel;
 
     public function __construct()
     {
@@ -19,6 +21,7 @@ class SmsLogicService
         $this->customerModel = new CustomerModel();
         $this->tripModel = new TripModel();
         $this->twilioService = new TwilioService();
+        $this->logModel = new CommunicationLogModel();
     }
 
     /**
@@ -28,19 +31,40 @@ class SmsLogicService
     {
         // Clean phone number (e.g., extract last 10 digits for matching)
         $cleanPhone = substr(preg_replace('/[^0-9]/', '', $from), -10);
+        $userType = 'unknown';
+        $userId = null;
+        $reply = '';
 
         // 1. Identify Sender
         $driver = $this->driverModel->like('phone', $cleanPhone, 'before')->first();
         if ($driver) {
-            return $this->handleDriverSms($driver, trim($body));
+            $userType = 'driver';
+            $userId = $driver->id;
+            $reply = $this->handleDriverSms($driver, trim($body));
+        } else {
+            $customer = $this->customerModel->like('phone', $cleanPhone, 'before')->first();
+            if ($customer) {
+                $userType = 'customer';
+                $userId = $customer->id;
+                $reply = $this->handleCustomerSms($customer, trim($body));
+            } else {
+                $reply = "Welcome to RideApp! Please register an account on our website before booking via text.";
+            }
         }
 
-        $customer = $this->customerModel->like('phone', $cleanPhone, 'before')->first();
-        if ($customer) {
-            return $this->handleCustomerSms($customer, trim($body));
-        }
+        $config = new \Config\Twilio();
+        $this->logModel->insert([
+            'type' => 'sms',
+            'direction' => 'inbound',
+            'from_number' => $from,
+            'to_number' => $config->number,
+            'user_type' => $userType,
+            'user_id' => $userId,
+            'content' => $body,
+            'action_taken' => $reply === "" ? "Proxied Message" : $reply
+        ]);
 
-        return "Welcome to RideApp! Please register an account on our website before booking via text.";
+        return $reply;
     }
 
     /**

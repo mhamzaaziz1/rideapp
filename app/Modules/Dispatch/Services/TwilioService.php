@@ -4,11 +4,13 @@ namespace Modules\Dispatch\Services;
 
 use Twilio\Rest\Client;
 use Config\Twilio;
+use Modules\Dispatch\Models\CommunicationLogModel;
 
 class TwilioService
 {
     protected $client;
     protected $twilioNumber;
+    protected $logModel;
 
     public function __construct()
     {
@@ -17,6 +19,7 @@ class TwilioService
             $this->client = new Client($config->sid, $config->token);
         }
         $this->twilioNumber = $config->number;
+        $this->logModel = new CommunicationLogModel();
     }
 
     /**
@@ -37,6 +40,17 @@ class TwilioService
                     'body' => $message
                 ]
             );
+
+            $this->logModel->insert([
+                'type' => 'sms',
+                'direction' => 'outbound',
+                'from_number' => $this->twilioNumber,
+                'to_number' => $to,
+                'user_type' => 'system',
+                'content' => $message,
+                'action_taken' => 'Sent automated SMS'
+            ]);
+
             return true;
         } catch (\Exception $e) {
             log_message('error', 'Twilio Error: ' . $e->getMessage());
