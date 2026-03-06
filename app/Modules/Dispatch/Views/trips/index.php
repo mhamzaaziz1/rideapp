@@ -5,8 +5,7 @@
 <style>
     /* Layout Grid: Content + Sidebar */
     .dispatch-layout {
-        display: grid;
-        grid-template-columns: 1fr 300px;
+        display: block;
         gap: 1.5rem;
         height: calc(100vh - 100px); /* Adjust based on navbar height */
         overflow: hidden;
@@ -16,13 +15,7 @@
         flex-direction: column;
         overflow: hidden; /* Scroll inside lists */
     }
-    .dispatch-sidebar {
-        background: var(--bg-surface);
-        border-left: 1px solid var(--border-color);
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-    }
+    /* Sidebar removed as per simplification request */
 
     /* Stats Bar (Compact) */
     .stats-bar {
@@ -80,6 +73,8 @@
         border: 1px solid var(--border-color);
         border-radius: var(--radius-sm);
         transition: all 0.2s;
+        position: relative;
+        z-index: 1;
     }
     .trip-wrapper:hover {
         border-color: var(--primary);
@@ -88,7 +83,7 @@
     .trip-card {
         padding: 1rem;
         display: grid;
-        grid-template-columns: 80px 1.5fr 1fr 140px; /* Status, Route, Customer, Action */
+        grid-template-columns: 80px 1.5fr 1.25fr 100px 130px; /* Status, Route, Customer/Driver, Price, Action */
         gap: 1rem;
         align-items: center;
         cursor: pointer;
@@ -116,28 +111,56 @@
     /* Dropdown Styles */
     .dropdown { position: relative; display: inline-block; }
     .dropdown-menu {
-        display: none; position: absolute; right: 0; top: 100%; mt: 4px;
+        display: none; position: absolute; right: 0; top: 100%; margin-top: 4px;
         background-color: var(--bg-surface);
         min-width: 160px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
         border: 1px solid var(--border-color);
         border-radius: var(--radius-sm);
-        z-index: 50;
+        z-index: 100;
         padding: 4px 0;
+        transform-origin: top right;
+        animation: dropdownFadeIn 0.2s ease-out;
+    }
+    @keyframes dropdownFadeIn {
+        from { opacity: 0; transform: scale(0.95); }
+        to { opacity: 1; transform: scale(1); }
     }
     .dropdown-menu.show { display: block; }
     .dropdown-item {
-        display: flex; align-items: center; gap: 8px;
-        padding: 8px 12px;
-        font-size: 0.85rem;
+        display: flex; align-items: center; gap: 10px;
+        padding: 10px 16px;
+        font-size: 0.875rem;
         color: var(--text-primary);
         text-decoration: none;
         cursor: pointer;
-        transition: background 0.1s;
+        transition: all 0.2s;
         border: none; background: none; width: 100%; text-align: left;
+        font-weight: 500;
     }
-    .dropdown-item:hover { background-color: var(--bg-surface-hover); }
-    .dropdown-item i { stroke-width: 1.5px; opacity: 0.7; }
+    .dropdown-item:hover { background-color: var(--bg-surface-hover); padding-left: 20px; }
+    .dropdown-item i { stroke-width: 1.5px; opacity: 0.6; }
+    .dropdown-item.text-danger { color: var(--danger); }
+    .dropdown-item.text-danger:hover { background-color: rgba(239, 68, 68, 0.05); }
+
+    /* Modal Animations */
+    .modal-overlay {
+        animation: fadeIn 0.3s ease-out;
+    }
+    .modal-content {
+        animation: slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideUp { 
+        from { opacity: 0; transform: translateY(20px) scale(0.95); } 
+        to { opacity: 1; transform: translateY(0) scale(1); } 
+    }
+
+    /* Trip Card Interactivity */
+    .trip-card:active {
+        transform: scale(0.995);
+        background: var(--bg-surface-hover);
+    }
 </style>
 
 <div style="padding: 1.5rem; height: 100vh; overflow: hidden; display: flex; flex-direction: column;">
@@ -148,8 +171,10 @@
             <h1 class="h3" style="margin:0;">Dispatch Board</h1>
             <div style="color:var(--text-secondary); font-size:0.9rem;">Live Operations Console</div>
         </div>
-        <div>
-            <button onclick="openQuickDispatchModal()" class="btn btn-primary"><i data-lucide="zap" width="16" style="margin-right:6px;"></i> Dispatch</button>
+        <div style="display: flex; gap: 0.75rem;">
+            <button onclick="openQuickDispatchModal()" class="btn btn-primary">
+                <i data-lucide="zap" width="16" style="margin-right:6px;"></i> Dispatch
+            </button>
         </div>
     </div>
 
@@ -253,38 +278,7 @@
             </div>
         </div>
 
-        <!-- Right: Driver Sidebar -->
-        <div class="dispatch-sidebar">
-            <div class="sidebar-header">
-                <span>Available Drivers</span>
-                <span style="font-size:0.8rem; background:rgba(16, 185, 129, 0.1); color:var(--success); padding:2px 6px; border-radius:4px;"><?= count($drivers) ?> Online</span>
-            </div>
-            
-            <div style="overflow-y: auto; flex:1;">
-                <?php foreach($drivers as $d): ?>
-                <div class="driver-list-item">
-                    <div class="driver-avatar-sm">
-                        <?= substr($d->first_name, 0, 1) . substr($d->last_name, 0, 1) ?>
-                    </div>
-                    <div style="flex:1;">
-                        <div style="font-size:0.9rem; font-weight:600;"><?= esc($d->first_name . ' ' . $d->last_name) ?></div>
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span style="font-size:0.75rem; color:var(--text-secondary);"><?= esc($d->vehicle_model) ?></span>
-                            <span style="font-size:0.75rem; color:var(--warning); font-weight:bold;">★ <?= number_format($d->rating ?? 0, 1) ?></span>
-                        </div>
-                    </div>
-                    <div class="driver-status"></div>
-                </div>
-                <?php endforeach; ?>
-                
-                <?php if(empty($drivers)): ?>
-                    <div style="padding:1rem; text-align:center; color:var(--text-secondary); font-size:0.9rem;">
-                        No drivers available.
-                    </div>
-                <?php endif; ?>
-            </div>
-        </div>
-
+        <!-- Right: Driver Sidebar Removed -->
     </div>
 </div>
 
@@ -539,6 +533,102 @@
                 <button type="submit" class="btn btn-danger">File Dispute</button>
              </div>
         </form>
+    </div>
+</div>
+
+<!-- Trip Details Modal -->
+<div id="tripDetailsModal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1300; align-items:center; justify-content:center; backdrop-filter:blur(4px);">
+    <div class="modal-content" style="background:var(--bg-surface); border-radius:16px; width:540px; max-width:95vw; box-shadow:var(--shadow-lg); border:1px solid var(--border-color); overflow:hidden; position:relative;">
+        <!-- Modal Header -->
+        <div style="padding:1.5rem 1.5rem 0.5rem; display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <h3 id="mdTripNumber" style="margin:0; font-size:1.5rem; font-weight:800; color:var(--text-primary); letter-spacing:-0.02em;">TRP-000000</h3>
+                <span id="mdTripStatus" class="status-badge" style="padding:4px 12px; border-radius:8px; font-weight:700; font-size:0.75rem;">Pending</span>
+            </div>
+            <button onclick="closeTripDetailsModal()" style="background:var(--bg-body); border:1px solid var(--border-color); cursor:pointer; color:var(--text-secondary); border-radius:8px; width:32px; height:32px; display:flex; align-items:center; justify-content:center;">&times;</button>
+        </div>
+
+        <div style="padding:1.5rem; display:flex; flex-direction:column; gap:1.5rem;">
+            <!-- Customer & Driver Row -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.25rem;">
+                <div>
+                    <div style="font-size:0.75rem; color:var(--text-secondary); text-transform:uppercase; font-weight:700; margin-bottom:8px; letter-spacing:0.02em;">Customer</div>
+                    <div style="background:var(--bg-body); padding:1.25rem; border-radius:12px; border:1px solid var(--border-color);">
+                        <div id="mdCustomerName" style="font-weight:700; font-size:1.1rem; color:var(--text-primary);">John Doe</div>
+                        <div style="display:flex; align-items:center; gap:6px; color:var(--text-secondary); margin-top:6px; font-size:0.9rem;">
+                            <i data-lucide="phone" width="14"></i>
+                            <span id="mdCustomerPhone">+1 (555) 000-0000</span>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <div style="font-size:0.75rem; color:var(--text-secondary); text-transform:uppercase; font-weight:700; margin-bottom:8px; letter-spacing:0.02em;">Driver</div>
+                    <div style="background:var(--bg-body); padding:1.25rem; border-radius:12px; border:1px solid var(--border-color);">
+                        <div id="mdDriverName" style="font-weight:700; font-size:1.1rem; color:var(--text-primary);">Unassigned</div>
+                        <div style="display:flex; align-items:center; gap:6px; color:var(--text-secondary); margin-top:6px; font-size:0.9rem;">
+                            <i data-lucide="car" width="14"></i>
+                            <span id="mdDriverVehicle">—</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Route Info -->
+            <div>
+                <div style="font-size:0.75rem; color:var(--text-secondary); text-transform:uppercase; font-weight:700; margin-bottom:8px; letter-spacing:0.02em;">Route</div>
+                <div style="background:var(--bg-body); padding:1.25rem; border-radius:12px; border:1px solid var(--border-color); display:flex; flex-direction:column; gap:1rem;">
+                    <div style="display:flex; align-items:flex-start; gap:12px;">
+                        <div style="width:24px; height:24px; border-radius:50%; background:rgba(16, 185, 129, 0.1); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                            <i data-lucide="map-pin" width="14" style="color:var(--success);"></i>
+                        </div>
+                        <div>
+                            <div style="font-size:0.75rem; color:var(--text-secondary); font-weight:600;">Pickup</div>
+                            <div id="mdPickupAddress" style="font-size:0.95rem; color:var(--text-primary); font-weight:500;">Pickup Address Area</div>
+                        </div>
+                    </div>
+                    <div style="display:flex; align-items:flex-start; gap:12px;">
+                        <div style="width:24px; height:24px; border-radius:50%; background:rgba(239, 68, 68, 0.1); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                            <i data-lucide="map-pin" width="14" style="color:var(--danger);"></i>
+                        </div>
+                        <div>
+                            <div style="font-size:0.75rem; color:var(--text-secondary); font-weight:600;">Dropoff</div>
+                            <div id="mdDropoffAddress" style="font-size:0.95rem; color:var(--text-primary); font-weight:500;">Dropoff Address Area</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Details Grid -->
+            <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:1rem; border-top:1px solid var(--border-color); padding-top:1.5rem;">
+                <div>
+                    <div style="font-size:0.7rem; color:var(--text-secondary); font-weight:600; text-transform:uppercase; margin-bottom:4px;">Date & Time</div>
+                    <div id="mdDateTime" style="font-weight:700; font-size:1rem; color:var(--text-primary);">2024-01-01</div>
+                    <div style="font-size:0.85rem; color:var(--text-secondary);" id="mdTimeOnly">00:00</div>
+                </div>
+                <div>
+                    <div style="font-size:0.7rem; color:var(--text-secondary); font-weight:600; text-transform:uppercase; margin-bottom:4px;">Distance</div>
+                    <div id="mdDistance" style="font-weight:700; font-size:1rem; color:var(--text-primary);">0.0 miles</div>
+                    <div style="font-size:0.85rem; color:var(--text-secondary);" id="mdDurationOnly">—</div>
+                </div>
+                <div>
+                    <div style="font-size:0.7rem; color:var(--text-secondary); font-weight:600; text-transform:uppercase; margin-bottom:4px;">Price</div>
+                    <div id="mdPrice" style="font-weight:800; font-size:1.25rem; color:var(--info);">$0.00</div>
+                </div>
+                <div>
+                    <div style="font-size:0.7rem; color:var(--text-secondary); font-weight:600; text-transform:uppercase; margin-bottom:4px;">Payment</div>
+                    <div style="display:flex; align-items:center; gap:4px; font-weight:700; font-size:0.9rem; background:var(--bg-body); padding:4px 8px; border-radius:6px; border:1px solid var(--border-color); width:fit-content;">
+                        <i data-lucide="credit-card" width="14"></i>
+                        <span id="mdPayment">Card</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notes -->
+            <div>
+                <div style="font-size:0.75rem; color:var(--text-secondary); text-transform:uppercase; font-weight:700; margin-bottom:8px; letter-spacing:0.02em;">Notes</div>
+                <div id="mdNotes" style="background:var(--bg-body); padding:1rem; border-radius:12px; border:1px solid var(--border-color); font-size:0.9rem; color:var(--text-primary); line-height:1.5; min-height:60px;">No notes provided.</div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -965,18 +1055,65 @@
         }
     }
 
-    function toggleTripDetails(tripId) {
-        const detailsEl = document.getElementById('trip-details-' + tripId);
-        const wrapperEl = document.getElementById('trip-wrapper-' + tripId);
-        if(!detailsEl) return;
+    function openTripDetailsModal(trip) {
+        document.getElementById('mdTripNumber').textContent = '#' + trip.trip_number;
         
-        if (detailsEl.style.display === 'none') {
-            detailsEl.style.display = 'block';
-            if(wrapperEl) wrapperEl.style.borderColor = 'var(--primary)';
-        } else {
-            detailsEl.style.display = 'none';
-            if(wrapperEl) wrapperEl.style.borderColor = 'var(--border-color)';
+        const statusEl = document.getElementById('mdTripStatus');
+        statusEl.textContent = (trip.status || 'Pending').charAt(0).toUpperCase() + (trip.status || 'pending').slice(1);
+        statusEl.className = 'status-badge status-' + (trip.status || 'pending');
+
+        document.getElementById('mdCustomerName').textContent = (trip.c_first || 'Guest') + ' ' + (trip.c_last || '');
+        document.getElementById('mdCustomerPhone').textContent = trip.c_phone || 'No phone';
+        
+        document.getElementById('mdDriverName').textContent = trip.d_first ? (trip.d_first + ' ' + (trip.d_last || '')) : 'Unassigned';
+        document.getElementById('mdDriverVehicle').textContent = trip.vehicle_model || (trip.driver_id ? 'Vehicle Loading...' : 'No vehicle');
+
+        document.getElementById('mdPickupAddress').textContent = trip.pickup_address || '—';
+        document.getElementById('mdDropoffAddress').textContent = trip.dropoff_address || '—';
+
+        const date = new Date(trip.created_at);
+        document.getElementById('mdDateTime').textContent = date.toLocaleDateString('en-US', {year: 'numeric', month: 'short', day: 'numeric'});
+        document.getElementById('mdTimeOnly').textContent = date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        
+        const dist = parseFloat(trip.distance_miles) || 0;
+        document.getElementById('mdDistance').textContent = dist.toFixed(1) + ' miles';
+        document.getElementById('mdDurationOnly').textContent = Math.round(dist * 2.5) + ' min'; // Estimated duration
+        
+        document.getElementById('mdPrice').textContent = '$' + (parseFloat(trip.fare_amount) || 0).toFixed(2);
+        document.getElementById('mdPayment').textContent = (trip.payment_method || 'Cash').charAt(0).toUpperCase() + (trip.payment_method || 'cash').slice(1);
+        
+        document.getElementById('mdNotes').textContent = trip.notes || 'No notes provided.';
+
+        document.getElementById('tripDetailsModal').style.display = 'flex';
+        lucide.createIcons();
+    }
+
+    function toggleDropdown(btn) {
+        const menu = btn.nextElementSibling;
+        const wrapper = btn.closest('.trip-wrapper');
+        const isOpen = menu.classList.contains('show');
+        
+        // Close all other dropdowns and reset z-indexes
+        document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.remove('show'));
+        document.querySelectorAll('.trip-wrapper').forEach(w => w.style.zIndex = '1');
+        
+        if (!isOpen) {
+            menu.classList.add('show');
+            if (wrapper) wrapper.style.zIndex = '100';
+            lucide.createIcons();
         }
+    }
+
+    // Close dropdowns on outside click
+    window.addEventListener('click', function(e) {
+        if (!e.target.closest('.dropdown')) {
+            document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.remove('show'));
+            document.querySelectorAll('.trip-wrapper').forEach(w => w.style.zIndex = '1');
+        }
+    });
+
+    function closeTripDetailsModal() {
+        document.getElementById('tripDetailsModal').style.display = 'none';
     }
 
     function openDisputeModal(tripId, customerId, driverId) {

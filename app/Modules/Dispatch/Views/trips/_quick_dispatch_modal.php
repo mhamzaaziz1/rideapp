@@ -3,6 +3,8 @@
     <style>
         @keyframes modalFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .modal-animate { animation: modalFadeIn 0.2s ease-out; }
+        /* Ensure Google Maps Autocomplete dropdown (pac-container) is above the modal (z-index 1100) */
+        .pac-container { z-index: 2000 !important; }
     </style>
     <div class="modal-content modal-animate" style="background:var(--bg-surface); padding:0; border-radius:var(--radius-md); width:100%; max-width:600px; box-shadow:var(--shadow-lg); display:flex; flex-direction:column; max-height:90vh;">
         
@@ -105,6 +107,19 @@
 
     function openQuickDispatchModal() {
         document.getElementById('quickDispatchModal').style.display = 'flex';
+        
+        // Re-initialize autocomplete specifically for these fields in case the global init missed them
+        if (typeof google !== 'undefined' && google.maps && google.maps.places) {
+            const pickupInput = document.querySelector('#quickDispatchModal input[name="pickup_address"]');
+            const dropoffInput = document.querySelector('#quickDispatchModal input[name="dropoff_address"]');
+            
+            if (pickupInput && !pickupInput.classList.contains('pac-target-input')) {
+                new google.maps.places.Autocomplete(pickupInput);
+            }
+            if (dropoffInput && !dropoffInput.classList.contains('pac-target-input')) {
+                new google.maps.places.Autocomplete(dropoffInput);
+            }
+        }
     }
     function closeQuickDispatchModal() {
         document.getElementById('quickDispatchModal').style.display = 'none';

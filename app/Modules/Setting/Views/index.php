@@ -156,6 +156,17 @@
                     <input type="text" class="form-input" name="company_vat" value="<?= $settings['company_vat'] ?? '' ?>">
                 </div>
 
+                <div class="section-title" style="margin-top: 2rem;">Maintenance</div>
+                <div style="background:var(--bg-body); padding:1.5rem; border-radius:12px; border:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <div style="font-weight:700; color:var(--text-primary); margin-bottom:4px;">Application Cache</div>
+                        <div style="font-size:0.85rem; color:var(--text-secondary);">Clear temporary data, view cache, and system logs to refresh the UI.</div>
+                    </div>
+                    <a href="<?= base_url('settings/clear-cache') ?>" class="btn btn-outline" style="text-decoration:none; display:flex; align-items:center; gap:8px; border-color:var(--danger); color:var(--danger);">
+                        <i data-lucide="trash-2" width="16"></i> Clear Cache
+                    </a>
+                </div>
+
             <?php elseif($tab == 'account'): ?>
                 <div class="section-title">Staff Management</div>
                 <div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">

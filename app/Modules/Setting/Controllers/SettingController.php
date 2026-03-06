@@ -132,4 +132,20 @@ class SettingController extends BaseController
 
         return redirect()->to(base_url('settings?tab=' . $tab))->with('success', 'Settings updated successfully.');
     }
+
+    public function clear_cache()
+    {
+        // Clear CodeIgniter Cache
+        cache()->clean();
+
+        // Clear view cache
+        $files = glob(WRITEPATH . 'cache/*'); 
+        foreach ($files as $file) {
+            if (is_file($file) && !str_contains($file, 'index.html')) {
+                unlink($file);
+            }
+        }
+
+        return redirect()->to(base_url('settings?tab=general'))->with('success', 'Application cache cleared successfully.');
+    }
 }

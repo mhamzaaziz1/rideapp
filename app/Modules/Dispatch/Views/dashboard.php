@@ -54,6 +54,18 @@
 
 <div class="dashboard-container">
 
+    <!-- Top Header -->
+    <div style="flex-shrink: 0; padding: 1.5rem 1.5rem 0 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h1 class="h3" style="margin:0;">Dispatch Board</h1>
+            <div style="color:var(--text-secondary); font-size:0.9rem;">Live Operations Console</div>
+        </div>
+        <div style="display: flex; gap: 0.75rem;">
+            <button onclick="openQuickDispatchModal()" class="btn btn-primary">
+                <i data-lucide="zap" width="16" style="margin-right:6px;"></i> Dispatch
+            </button>
+        </div>
+    </div>
 
     <div class="dashboard-grid">
         
@@ -722,5 +734,7 @@
         }
     }
 </script>
+
+<?= view('Modules\Dispatch\Views\trips\_quick_dispatch_modal') ?>
 
 <?= $this->endSection() ?>

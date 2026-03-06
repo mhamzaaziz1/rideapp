@@ -35,9 +35,17 @@ class DispatchController extends BaseController
             ->orderBy('trips.created_at', 'DESC')
             ->findAll();
 
+        $driverModel = new \Modules\Fleet\Models\DriverModel();
+        $drivers = $driverModel->where('status', 'active')->findAll();
+
+        $customerModel = new \Modules\Customer\Models\CustomerModel();
+        $customers = $customerModel->where('status', 'active')->findAll();
+
         return view('Modules\Dispatch\Views\dashboard', [
             'title' => 'Dispatch Console',
-            'activeTrips' => $activeTrips
+            'activeTrips' => $activeTrips,
+            'drivers' => $drivers,
+            'customers' => $customers
         ]);
     }
 
