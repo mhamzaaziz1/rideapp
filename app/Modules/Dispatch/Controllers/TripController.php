@@ -260,7 +260,7 @@ class TripController extends BaseController
     {
         // 1. Fetch All Trips with Joins
         $builder = $this->tripModel->builder();
-        $builder->select('trips.*, customers.first_name as c_first, customers.last_name as c_last, drivers.first_name as d_first, drivers.last_name as d_last, drivers.vehicle_model, drivers.rating as d_rating, customers.rating as c_rating, 
+        $builder->select('trips.*, customers.first_name as c_first, customers.last_name as c_last, customers.wallet_balance as c_wallet_balance, drivers.first_name as d_first, drivers.last_name as d_last, drivers.vehicle_model, drivers.rating as d_rating, drivers.wallet_balance as d_wallet_balance, customers.rating as c_rating, 
             (SELECT COUNT(*) FROM ratings WHERE ratings.trip_id = trips.id AND ratings.rater_type = "customer") as driver_is_rated,
             (SELECT COUNT(*) FROM ratings WHERE ratings.trip_id = trips.id AND ratings.rater_type = "driver") as customer_is_rated');
         $builder->join('customers', 'customers.id = trips.customer_id', 'left');

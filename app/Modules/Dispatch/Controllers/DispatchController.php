@@ -20,6 +20,7 @@ class DispatchController extends BaseController
                 customers.phone as c_phone, 
                 customers.email as c_email,
                 customers.rating as c_rating,
+                customers.wallet_balance as c_wallet_balance,
                 (SELECT COUNT(*) FROM trips t2 WHERE t2.customer_id = trips.customer_id) as c_trip_count,
                 
                 drivers.first_name as d_first, 
@@ -27,7 +28,8 @@ class DispatchController extends BaseController
                 drivers.phone as d_phone, 
                 drivers.vehicle_model as d_vehicle, 
                 drivers.license_plate as d_plate,
-                drivers.rating as d_rating
+                drivers.rating as d_rating,
+                drivers.wallet_balance as d_wallet_balance
             ')
             ->join('customers', 'customers.id = trips.customer_id', 'left')
             ->join('drivers', 'drivers.id = trips.driver_id', 'left')

@@ -58,6 +58,11 @@
             <div style="font-weight:600; font-size:0.875rem; margin-bottom:4px; display:flex; align-items:center; gap:6px; color: var(--text-primary);">
                 <i data-lucide="user" width="14" style="color:var(--text-secondary)"></i> 
                 <span><?= esc($trip->c_first ?? 'Guest') ?></span>
+                <?php if(isset($trip->c_wallet_balance)): ?>
+                    <span style="font-size:0.65rem; background:rgba(16, 185, 129, 0.1); color:var(--success); padding:2px 6px; border-radius:12px; font-weight:700;" title="Customer Wallet Balance">
+                        $<?= number_format($trip->c_wallet_balance, 2) ?>
+                    </span>
+                <?php endif; ?>
                 <?php if(!empty($trip->passengers)): ?>
                     <span style="color:var(--text-secondary); font-size:0.7rem; background: var(--bg-body); padding: 1px 4px; border-radius: 4px;" title="Passengers">
                         <?= $trip->passengers ?>
@@ -68,6 +73,11 @@
                 <i data-lucide="steering-wheel" width="14"></i>
                 <?php if($trip->d_first): ?>
                     <span style="color:var(--text-primary); font-weight: 500;"><?= esc($trip->d_first) ?></span>
+                    <?php if(isset($trip->d_wallet_balance)): ?>
+                        <span style="font-size:0.65rem; background:rgba(59, 130, 246, 0.1); color:var(--info); padding:2px 6px; border-radius:12px; font-weight:700;" title="Driver Wallet Balance">
+                            $<?= number_format($trip->d_wallet_balance, 2) ?>
+                        </span>
+                    <?php endif; ?>
                 <?php else: ?>
                     <span style="color:var(--warning); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.02em;">Unassigned</span>
                 <?php endif; ?>

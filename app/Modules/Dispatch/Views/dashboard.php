@@ -16,7 +16,7 @@
     .dashboard-grid {
         flex: 1;
         display: grid;
-        grid-template-columns: 260px 280px 1fr 320px 240px; /* 5 Columns */
+        grid-template-columns: 260px 280px 1fr 320px; /* 4 Columns */
         gap: 1rem;
         padding: 1rem;
         overflow: hidden; /* Individual cols scroll */
@@ -288,15 +288,7 @@
             </div>
         </div>
 
-        <!-- COL 5: Drivers -->
-        <div class="col-panel">
-            <div class="panel-header"><i data-lucide="car" width="16"></i> Drivers</div>
-            <div class="panel-body" style="display:flex; align-items:center; justify-content:center; flex-direction:column; color:var(--text-secondary); text-align:center;">
-                <i data-lucide="users" width="48" style="opacity:0.2; margin-bottom:1rem;"></i>
-                <p style="font-size:0.85rem;">Enter trip details and dispatch</p>
-                <small>4 drivers online</small>
-            </div>
-        </div>
+
 
     </div>
 </div>
