@@ -6,6 +6,34 @@
     <title>RideFlow | <?= $title ?? 'Dispatch' ?></title>
     <link rel="stylesheet" href="<?= base_url('assets/css/app.css') ?>">
     <script src="https://unpkg.com/lucide@latest"></script> <!-- Icons -->
+
+    <?php 
+        $settingsFile = WRITEPATH . 'settings.json';
+        $siteSettings = [];
+        if (file_exists($settingsFile)) {
+            $siteSettings = json_decode(file_get_contents($settingsFile), true) ?? [];
+        }
+        $googleMapKey = $siteSettings['google_maps_api_key'] ?? getenv('GOOGLE_MAPS_API_KEY');
+    ?>
+
+    <script>
+        // Global Map settings exported for frontend use
+        window.APP_MAP_PROVIDER = '<?= $siteSettings['map_provider'] ?? 'osm' ?>';
+        window.APP_GOOGLE_MAPS_KEY = '<?= $googleMapKey ?>';
+
+        // Google Maps Autocomplete Initialization
+        function initAutocomplete() {
+            const inputs = document.querySelectorAll('.addr-autocomplete');
+            inputs.forEach(input => {
+                new google.maps.places.Autocomplete(input);
+            });
+            document.dispatchEvent(new Event('google-maps-ready'));
+        }
+    </script>
+    
+    <?php if($googleMapKey): ?>
+    <script src="https://maps.googleapis.com/maps/api/js?key=<?= $googleMapKey ?>&libraries=places&callback=initAutocomplete" async defer></script>
+    <?php endif; ?>
 </head>
 <body>
     <div class="app-container">
@@ -201,33 +229,6 @@
         }
 
     </script>
-    <script>
-        // Google Maps Autocomplete Initialization
-        function initAutocomplete() {
-            const inputs = document.querySelectorAll('.addr-autocomplete');
-            inputs.forEach(input => {
-                new google.maps.places.Autocomplete(input);
-            });
-        }
-    </script>
-    <?php 
-        $settingsFile = WRITEPATH . 'settings.json';
-        $siteSettings = [];
-        if (file_exists($settingsFile)) {
-            $siteSettings = json_decode(file_get_contents($settingsFile), true) ?? [];
-        }
-        $googleMapKey = $siteSettings['google_maps_api_key'] ?? getenv('GOOGLE_MAPS_API_KEY');
-    ?>
-    <?php if($googleMapKey): ?>
-    <script src="https://maps.googleapis.com/maps/api/js?key=<?= $googleMapKey ?>&libraries=places&callback=initAutocomplete" async defer></script>
-    <?php endif; ?>
-    
-    <script>
-        // Global Map settings exported for frontend use
-        window.APP_MAP_PROVIDER = '<?= $siteSettings['map_provider'] ?? 'osm' ?>';
-        window.APP_GOOGLE_MAPS_KEY = '<?= $googleMapKey ?>';
-    </script>
-    
     <?= $this->renderSection('scripts') ?>
 </body>
 </html>

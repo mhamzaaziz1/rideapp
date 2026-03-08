@@ -135,6 +135,7 @@
                     <div style="display:flex; flex-direction:column; gap:0.5rem; font-size:0.8rem;">
                         <div style="display:flex; gap:6px; color:var(--text-secondary);"><i data-lucide="mail" width="12"></i> <span id="cust-email">--</span></div>
                         <div style="display:flex; gap:6px;"><i data-lucide="history" width="12"></i> <span id="cust-trips">0</span> trips</div>
+                        <div style="display:flex; gap:6px; color:var(--success); font-weight:600;"><i data-lucide="wallet" width="12"></i> $<span id="cust-wallet">0.00</span></div>
                     </div>
                 </div>
 
@@ -152,6 +153,7 @@
                         <div style="display:flex; gap:6px; color:var(--text-secondary);"><i data-lucide="car" width="12"></i> <span id="driver-vehicle">--</span></div>
                         <div style="display:flex; gap:6px; color:var(--text-secondary);"><i data-lucide="credit-card" width="12"></i> <span id="driver-plate">--</span></div>
                         <div style="display:flex; gap:6px;"><i data-lucide="star" width="12" style="color:var(--warning);"></i> <span id="driver-rating">--</span></div>
+                        <div style="display:flex; gap:6px; color:var(--info); font-weight:600;"><i data-lucide="wallet" width="12"></i> $<span id="driver-wallet">0.00</span></div>
                     </div>
                 </div>
 
@@ -297,27 +299,13 @@
     let map, tripLayer;
     let mapProvider = window.APP_MAP_PROVIDER || 'osm';
     
-    // Leaflet specific
     let pickupIcon, dropoffIcon;
-    if (mapProvider === 'osm' && typeof L !== 'undefined') {
-        pickupIcon = L.divIcon({
-            html: '<div style="background:var(--success); width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow:0 2px 4px rgba(0,0,0,0.3);"></div>',
-            className: 'custom-div-icon',
-            iconSize: [12, 12],
-            iconAnchor: [6, 6]
-        });
-        dropoffIcon = L.divIcon({
-            html: '<div style="background:var(--danger); width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow:0 2px 4px rgba(0,0,0,0.3);"></div>',
-            className: 'custom-div-icon',
-            iconSize: [12, 12],
-            iconAnchor: [6, 6]
-        });
-    }
 
     // Google Maps specific
     let gMapMarkers = [];
-    let gMapPolyline = null;
     let gMapTrafficLayer = null;
+    let directionsService = null;
+    let directionsRenderer = null;
 
     // Variables to store coordinates
     let pickupCoords = { lat: 40.7128, lng: -74.0060 };
@@ -326,35 +314,110 @@
     document.addEventListener('DOMContentLoaded', () => {
         lucide.createIcons();
 
-        // --- Google Autocomplete for Pickup/Dropoff ---
-        if (typeof google !== 'undefined' && google.maps && google.maps.places) {
+        // --- Dedicated Function for Google Maps Init ---
+        function initDashboardGoogleMaps() {
+            if (typeof google === 'undefined' || !google.maps) return;
+
+            // 1. Setup Autocomplete
             const pickupInput = document.getElementById('input-pickup');
             const dropoffInput = document.getElementById('input-dropoff');
+            if (pickupInput && dropoffInput && google.maps.places) {
+                const pickupAutocomplete = new google.maps.places.Autocomplete(pickupInput);
+                const dropoffAutocomplete = new google.maps.places.Autocomplete(dropoffInput);
 
-            const pickupAutocomplete = new google.maps.places.Autocomplete(pickupInput);
-            const dropoffAutocomplete = new google.maps.places.Autocomplete(dropoffInput);
+                pickupAutocomplete.addListener('place_changed', () => {
+                    const place = pickupAutocomplete.getPlace();
+                    if (place.geometry) {
+                        pickupCoords = { lat: place.geometry.location.lat(), lng: place.geometry.location.lng() };
+                    }
+                });
 
-            pickupAutocomplete.addListener('place_changed', () => {
-                const place = pickupAutocomplete.getPlace();
-                if (place.geometry) {
-                    pickupCoords = {
-                        lat: place.geometry.location.lat(),
-                        lng: place.geometry.location.lng()
-                    };
-                    console.log('Pickup coords:', pickupCoords);
+                dropoffAutocomplete.addListener('place_changed', () => {
+                    const place = dropoffAutocomplete.getPlace();
+                    if (place.geometry) {
+                        dropoffCoords = { lat: place.geometry.location.lat(), lng: place.geometry.location.lng() };
+                    }
+                });
+            }
+
+            // 2. Setup Map
+            if (mapProvider === 'google') {
+                map = new google.maps.Map(document.getElementById('map'), {
+                    center: { lat: 40.7128, lng: -74.0060 },
+                    zoom: 11,
+                    disableDefaultUI: true,
+                    zoomControl: true,
+                    styles: [
+                        { "elementType": "geometry", "stylers": [{ "color": "#f5f5f5" }] },
+                        { "elementType": "labels.icon", "stylers": [{ "visibility": "off" }] },
+                        { "elementType": "labels.text.fill", "stylers": [{ "color": "#616161" }] },
+                        { "elementType": "labels.text.stroke", "stylers": [{ "color": "#f5f5f5" }] },
+                        { "featureType": "administrative.land_parcel", "elementType": "labels.text.fill", "stylers": [{ "color": "#bdbdbd" }] },
+                        { "featureType": "poi", "elementType": "geometry", "stylers": [{ "color": "#eeeeee" }] },
+                        { "featureType": "poi", "elementType": "labels.text.fill", "stylers": [{ "color": "#757575" }] },
+                        { "featureType": "poi.park", "elementType": "geometry", "stylers": [{ "color": "#e5e5e5" }] },
+                        { "featureType": "poi.park", "elementType": "labels.text.fill", "stylers": [{ "color": "#9e9e9e" }] },
+                        { "featureType": "road", "elementType": "geometry", "stylers": [{ "color": "#ffffff" }] },
+                        { "featureType": "road.arterial", "elementType": "labels.text.fill", "stylers": [{ "color": "#757575" }] },
+                        { "featureType": "road.highway", "elementType": "geometry", "stylers": [{ "color": "#dadada" }] },
+                        { "featureType": "road.highway", "elementType": "labels.text.fill", "stylers": [{ "color": "#616161" }] },
+                        { "featureType": "road.local", "elementType": "labels.text.fill", "stylers": [{ "color": "#9e9e9e" }] },
+                        { "featureType": "transit.line", "elementType": "geometry", "stylers": [{ "color": "#e5e5e5" }] },
+                        { "featureType": "transit.station", "elementType": "geometry", "stylers": [{ "color": "#eeeeee" }] },
+                        { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#c9c9c9" }] },
+                        { "featureType": "water", "elementType": "labels.text.fill", "stylers": [{ "color": "#9e9e9e" }] }
+                    ]
+                });
+
+                directionsService = new google.maps.DirectionsService();
+                directionsRenderer = new google.maps.DirectionsRenderer({
+                    map: map,
+                    suppressMarkers: true, // We draw our own custom markers
+                    polylineOptions: {
+                        strokeColor: "#6366f1",
+                        strokeOpacity: 0.8,
+                        strokeWeight: 4
+                    }
+                });
+
+                gMapTrafficLayer = new google.maps.TrafficLayer();
+                let trafficEnabled = false;
+
+                const btnTraffic = document.getElementById('btn-traffic');
+                if(btnTraffic) {
+                    btnTraffic.addEventListener('click', () => {
+                        trafficEnabled = !trafficEnabled;
+                        if(trafficEnabled) {
+                            gMapTrafficLayer.setMap(map);
+                            btnTraffic.style.background = 'var(--success)';
+                            btnTraffic.innerHTML = '<i data-lucide="traffic-cone" width="12"></i> Traffic On';
+                            if (typeof lucide !== 'undefined') lucide.createIcons();
+                            showTrafficInfoGoogle();
+                        } else {
+                            gMapTrafficLayer.setMap(null);
+                            btnTraffic.style.background = '';
+                            btnTraffic.innerHTML = '<i data-lucide="traffic-cone" width="12"></i> Traffic';
+                            if (typeof lucide !== 'undefined') lucide.createIcons();
+                        }
+                    });
                 }
-            });
 
-            dropoffAutocomplete.addListener('place_changed', () => {
-                const place = dropoffAutocomplete.getPlace();
-                if (place.geometry) {
-                    dropoffCoords = {
-                        lat: place.geometry.location.lat(),
-                        lng: place.geometry.location.lng()
-                    };
-                    console.log('Dropoff coords:', dropoffCoords);
+                function showTrafficInfoGoogle() {
+                    const infoWindow = new google.maps.InfoWindow({
+                        content: buildTrafficHtml(),
+                        position: { lat: 40.7128, lng: -74.0060 }
+                    });
+                    infoWindow.open(map);
+                    setTimeout(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); }, 100);
                 }
-            });
+            }
+        }
+
+        // Initialize Google Maps if it's already loaded, otherwise listen for the custom event
+        if (typeof google !== 'undefined' && google.maps) {
+            initDashboardGoogleMaps();
+        } else {
+            document.addEventListener('google-maps-ready', initDashboardGoogleMaps);
         }
 
         // --- Hourly Stats Modal Logic ---
@@ -400,6 +463,19 @@
             }).addTo(map);
 
             tripLayer = L.featureGroup().addTo(map);
+            
+            pickupIcon = L.divIcon({
+                html: '<div style="background:var(--success); width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow:0 2px 4px rgba(0,0,0,0.3);"></div>',
+                className: 'custom-div-icon',
+                iconSize: [12, 12],
+                iconAnchor: [6, 6]
+            });
+            dropoffIcon = L.divIcon({
+                html: '<div style="background:var(--danger); width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow:0 2px 4px rgba(0,0,0,0.3);"></div>',
+                className: 'custom-div-icon',
+                iconSize: [12, 12],
+                iconAnchor: [6, 6]
+            });
 
             // Traffic Layer (TomTom Traffic Flow Tile Layer - free alternative)
             let trafficLayer = null;
@@ -448,66 +524,7 @@
                     .openOn(map);
                 setTimeout(() => lucide.createIcons(), 100);
             }
-        } else if (mapProvider === 'google' && typeof google !== 'undefined') {
-            // Google Maps Init
-            map = new google.maps.Map(document.getElementById('map'), {
-                center: { lat: 40.7128, lng: -74.0060 },
-                zoom: 11,
-                disableDefaultUI: true,
-                zoomControl: true,
-                styles: [
-                    { "elementType": "geometry", "stylers": [{ "color": "#f5f5f5" }] },
-                    { "elementType": "labels.icon", "stylers": [{ "visibility": "off" }] },
-                    { "elementType": "labels.text.fill", "stylers": [{ "color": "#616161" }] },
-                    { "elementType": "labels.text.stroke", "stylers": [{ "color": "#f5f5f5" }] },
-                    { "featureType": "administrative.land_parcel", "elementType": "labels.text.fill", "stylers": [{ "color": "#bdbdbd" }] },
-                    { "featureType": "poi", "elementType": "geometry", "stylers": [{ "color": "#eeeeee" }] },
-                    { "featureType": "poi", "elementType": "labels.text.fill", "stylers": [{ "color": "#757575" }] },
-                    { "featureType": "poi.park", "elementType": "geometry", "stylers": [{ "color": "#e5e5e5" }] },
-                    { "featureType": "poi.park", "elementType": "labels.text.fill", "stylers": [{ "color": "#9e9e9e" }] },
-                    { "featureType": "road", "elementType": "geometry", "stylers": [{ "color": "#ffffff" }] },
-                    { "featureType": "road.arterial", "elementType": "labels.text.fill", "stylers": [{ "color": "#757575" }] },
-                    { "featureType": "road.highway", "elementType": "geometry", "stylers": [{ "color": "#dadada" }] },
-                    { "featureType": "road.highway", "elementType": "labels.text.fill", "stylers": [{ "color": "#616161" }] },
-                    { "featureType": "road.local", "elementType": "labels.text.fill", "stylers": [{ "color": "#9e9e9e" }] },
-                    { "featureType": "transit.line", "elementType": "geometry", "stylers": [{ "color": "#e5e5e5" }] },
-                    { "featureType": "transit.station", "elementType": "geometry", "stylers": [{ "color": "#eeeeee" }] },
-                    { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#c9c9c9" }] },
-                    { "featureType": "water", "elementType": "labels.text.fill", "stylers": [{ "color": "#9e9e9e" }] }
-                ]
-            });
-
-            gMapTrafficLayer = new google.maps.TrafficLayer();
-            let trafficEnabled = false;
-
-            const btnTraffic = document.getElementById('btn-traffic');
-            if(btnTraffic) {
-                btnTraffic.addEventListener('click', () => {
-                    trafficEnabled = !trafficEnabled;
-                    if(trafficEnabled) {
-                        gMapTrafficLayer.setMap(map);
-                        btnTraffic.style.background = 'var(--success)';
-                        btnTraffic.innerHTML = '<i data-lucide="traffic-cone" width="12"></i> Traffic On';
-                        lucide.createIcons();
-                        showTrafficInfoGoogle();
-                    } else {
-                        gMapTrafficLayer.setMap(null);
-                        btnTraffic.style.background = '';
-                        btnTraffic.innerHTML = '<i data-lucide="traffic-cone" width="12"></i> Traffic';
-                        lucide.createIcons();
-                    }
-                });
-            }
-
-            function showTrafficInfoGoogle() {
-                const infoWindow = new google.maps.InfoWindow({
-                    content: buildTrafficHtml(),
-                    position: { lat: 40.7128, lng: -74.0060 }
-                });
-                infoWindow.open(map);
-                setTimeout(() => lucide.createIcons(), 100);
-            }
-        }
+        } // end of Map Init
 
         function buildTrafficHtml() {
             const trafficData = [
@@ -625,6 +642,7 @@
         document.getElementById('cust-phone').innerText = t.c_phone || '--'; 
         document.getElementById('cust-email').innerText = t.c_email || '--';
         document.getElementById('cust-trips').innerText = t.c_trip_count || '0';
+        document.getElementById('cust-wallet').innerText = t.c_wallet_balance ? parseFloat(t.c_wallet_balance).toFixed(2) : '0.00';
         
         // 2. Update Driver Panel
         if(t.driver_id) {
@@ -636,6 +654,7 @@
             document.getElementById('driver-vehicle').innerText = t.d_vehicle || t.vehicle_type || 'Vehicle';
             document.getElementById('driver-plate').innerText = t.d_plate || '--';
             document.getElementById('driver-rating').innerText = (parseFloat(t.d_rating) || 0).toFixed(1) + ' ★';
+            document.getElementById('driver-wallet').innerText = t.d_wallet_balance ? parseFloat(t.d_wallet_balance).toFixed(2) : '0.00';
         } else {
             document.getElementById('driver-initials').innerText = '--';
             document.getElementById('driver-name').innerText = 'Not Assigned';
@@ -643,6 +662,7 @@
             document.getElementById('driver-vehicle').innerText = '--';
             document.getElementById('driver-plate').innerText = '--';
             document.getElementById('driver-rating').innerText = '--';
+            document.getElementById('driver-wallet').innerText = '0.00';
         }
 
         // 3. Update Trip Form
@@ -670,8 +690,8 @@
             const p1 = { lat: lat1, lng: lng1 };
             const p2 = { lat: lat2, lng: lng2 };
 
-            if (mapProvider === 'osm') {
-                tripLayer.clearLayers();
+            if (mapProvider === 'osm' && typeof L !== 'undefined') {
+                if(tripLayer) tripLayer.clearLayers();
                 L.marker([lat1, lng1], {icon: pickupIcon}).addTo(tripLayer).bindPopup("Pickup: " + t.pickup_address);
                 L.marker([lat2, lng2], {icon: dropoffIcon}).addTo(tripLayer).bindPopup("Dropoff: " + t.dropoff_address);
                 
@@ -685,10 +705,10 @@
                 map.fitBounds(L.latLngBounds([lat1, lng1], [lat2, lng2]).pad(0.2));
                 map.invalidateSize();
             } else if (mapProvider === 'google' && typeof google !== 'undefined') {
-                // Clear existing GMaps markers
+                // Clear existing GMaps markers and route
                 gMapMarkers.forEach(m => m.setMap(null));
                 gMapMarkers = [];
-                if (gMapPolyline) gMapPolyline.setMap(null);
+                if (directionsRenderer) directionsRenderer.setDirections({routes: []});
 
                 // Add Google Maps SVG Icons
                 const pinSVGFilled = "M 12,2 C 8.134,2 5,5.134 5,9 c 0,5.25 7,13 7,13 0,0 7,-7.75 7,-13 0,-3.866 -3.134,-7 -7,-7 z";
@@ -708,20 +728,26 @@
 
                 gMapMarkers.push(pickupMarker, dropoffMarker);
 
-                // Add Polyline
-                gMapPolyline = new google.maps.Polyline({
-                    path: [p1, p2],
-                    geodesic: true,
-                    strokeColor: "#6366f1",
-                    strokeOpacity: 0.8,
-                    strokeWeight: 4
-                });
-                gMapPolyline.setMap(map);
-
-                const bounds = new google.maps.LatLngBounds();
-                bounds.extend(p1);
-                bounds.extend(p2);
-                map.fitBounds(bounds);
+                // Request Driving Route
+                if (directionsService && directionsRenderer) {
+                    const request = {
+                        origin: p1,
+                        destination: p2,
+                        travelMode: 'DRIVING'
+                    };
+                    directionsService.route(request, function(response, status) {
+                        if (status === 'OK') {
+                            directionsRenderer.setDirections(response);
+                        } else {
+                            console.warn('Directions request failed due to ' + status);
+                            // Fallback: just fit bounds to markers if route fails
+                            const bounds = new google.maps.LatLngBounds();
+                            bounds.extend(p1);
+                            bounds.extend(p2);
+                            map.fitBounds(bounds);
+                        }
+                    });
+                }
             }
         }
     }
