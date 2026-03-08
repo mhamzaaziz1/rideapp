@@ -16,10 +16,10 @@
     .dashboard-grid {
         flex: 1;
         display: grid;
-        grid-template-columns: 260px 280px 1fr 320px; /* 4 Columns */
+        grid-template-columns: 260px 280px 320px 1fr; /* Col3 Details shrink, Col4 Map expands */
         gap: 1rem;
         padding: 1rem;
-        overflow: hidden; /* Individual cols scroll */
+        overflow: hidden;
     }
 
 
@@ -306,6 +306,7 @@
     let gMapTrafficLayer = null;
     let directionsService = null;
     let directionsRenderer = null;
+    let gMapFallbackPolyline = null;
 
     // Variables to store coordinates
     let pickupCoords = { lat: 40.7128, lng: -74.0060 };
@@ -708,8 +709,9 @@
                 // Clear existing GMaps markers and route
                 gMapMarkers.forEach(m => m.setMap(null));
                 gMapMarkers = [];
-                if (directionsRenderer) directionsRenderer.setDirections({routes: []});
-
+                if (directionsRenderer) directionsRenderer.set('directions', null);
+                if (gMapFallbackPolyline) gMapFallbackPolyline.setMap(null);
+    
                 // Add Google Maps SVG Icons
                 const pinSVGFilled = "M 12,2 C 8.134,2 5,5.134 5,9 c 0,5.25 7,13 7,13 0,0 7,-7.75 7,-13 0,-3.866 -3.134,-7 -7,-7 z";
                 
@@ -725,9 +727,9 @@
                     title: "Dropoff: " + t.dropoff_address,
                     icon: { path: pinSVGFilled, fillColor: "#ef4444", fillOpacity: 1, strokeColor: "#ffffff", strokeWeight: 2, scale: 1.2, anchor: new google.maps.Point(12, 22) }
                 });
-
+    
                 gMapMarkers.push(pickupMarker, dropoffMarker);
-
+    
                 // Request Driving Route
                 if (directionsService && directionsRenderer) {
                     const request = {
@@ -740,7 +742,16 @@
                             directionsRenderer.setDirections(response);
                         } else {
                             console.warn('Directions request failed due to ' + status);
-                            // Fallback: just fit bounds to markers if route fails
+                            // Fallback: just fit bounds to markers and draw a straight line if route fails
+                            gMapFallbackPolyline = new google.maps.Polyline({
+                                path: [p1, p2],
+                                geodesic: true,
+                                strokeColor: "#6366f1",
+                                strokeOpacity: 0.8,
+                                strokeWeight: 4
+                            });
+                            gMapFallbackPolyline.setMap(map);
+                            
                             const bounds = new google.maps.LatLngBounds();
                             bounds.extend(p1);
                             bounds.extend(p2);
