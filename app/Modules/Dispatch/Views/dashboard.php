@@ -709,7 +709,7 @@
                 // Clear existing GMaps markers and route
                 gMapMarkers.forEach(m => m.setMap(null));
                 gMapMarkers = [];
-                if (directionsRenderer) directionsRenderer.set('directions', null);
+                if (directionsRenderer) directionsRenderer.setMap(null); // Detach cleanly
                 if (gMapFallbackPolyline) gMapFallbackPolyline.setMap(null);
     
                 // Add Google Maps SVG Icons
@@ -739,6 +739,7 @@
                     };
                     directionsService.route(request, function(response, status) {
                         if (status === 'OK') {
+                            directionsRenderer.setMap(map); // Re-attach
                             directionsRenderer.setDirections(response);
                         } else {
                             console.warn('Directions request failed due to ' + status);
