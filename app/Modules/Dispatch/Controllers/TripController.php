@@ -273,7 +273,9 @@ class TripController extends BaseController
         $request = \Config\Services::request();
         $search = $request->getGet('search');
         $driverId = $request->getGet('driver_id');
-        $date = $request->getGet('date');
+        $fromDate = $request->getGet('from_date');
+        $toDate = $request->getGet('to_date');
+        $date = $request->getGet('date'); // Legacy
         $status = $request->getGet('status');
 
         if (!empty($search)) {
@@ -292,7 +294,13 @@ class TripController extends BaseController
             $builder->where('trips.driver_id', $driverId);
         }
 
-        if (!empty($date)) {
+        if (!empty($fromDate)) {
+            $builder->where('trips.created_at >=', $fromDate . ' 00:00:00');
+        }
+        if (!empty($toDate)) {
+            $builder->where('trips.created_at <=', $toDate . ' 23:59:59');
+        }
+        if (!empty($date) && empty($fromDate) && empty($toDate)) {
             $builder->like('trips.created_at', $date, 'after'); // 'YYYY-MM-DD%'
         }
 
@@ -359,6 +367,8 @@ class TripController extends BaseController
             'filters' => [
                 'search' => $search,
                 'driver_id' => $driverId,
+                'from_date' => $fromDate,
+                'to_date' => $toDate,
                 'date' => $date,
                 'status' => $status
             ],
@@ -428,5 +438,40 @@ class TripController extends BaseController
         }
 
         return view('Modules\Dispatch\Views\trips\print', ['trip' => $trip]);
+    }
+
+    /**
+     * Bulk print trip receipts.
+     */
+    public function bulkPrint()
+    {
+        $ids = $this->request->getVar('ids');
+        if (empty($ids)) {
+            return redirect()->back()->with('error', 'No trips selected for printing.');
+        }
+
+        if (is_string($ids)) {
+            $ids = explode(',', $ids);
+        }
+
+        $db = \Config\Database::connect();
+        $trips = $db->table('trips')
+            ->select('
+                trips.*,
+                customers.first_name as c_first, customers.last_name as c_last, customers.phone as c_phone,
+                drivers.first_name as d_first, drivers.last_name as d_last, drivers.phone as d_phone
+            ')
+            ->join('customers', 'customers.id = trips.customer_id', 'left')
+            ->join('drivers',   'drivers.id   = trips.driver_id',   'left')
+            ->whereIn('trips.id', $ids)
+             ->where('trips.deleted_at', null)
+            ->orderBy('trips.created_at', 'DESC')
+            ->get()->getResult();
+
+        if (empty($trips)) {
+            return redirect()->back()->with('error', 'No valid trips found for printing.');
+        }
+
+        return view('Modules\Dispatch\Views\trips\bulk_print', ['trips' => $trips]);
     }
 }

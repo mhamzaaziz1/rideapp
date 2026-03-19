@@ -56,10 +56,12 @@
     .balance-val-neg { color: #d97706; } /* Amber/Orange for owing */
     
     /* Tabs */
-    .profile-tabs { border-bottom: 1px solid var(--border-color); margin-bottom: 1.5rem; display: flex; gap: 2rem; }
+    .profile-tabs { border-bottom: 1px solid var(--border-color); margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: flex-end; }
+    .tab-labels { display: flex; gap: 2rem; }
     .p-tab { padding-bottom: 1rem; font-weight: 600; color: var(--text-secondary); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; }
     .p-tab:hover { color: var(--text-primary); }
     .p-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+    .tab-actions { padding-bottom: 0.5rem; }
 
     /* History */
     .history-item { background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 1.25rem; margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; }
@@ -217,13 +219,44 @@
 
     </div>
 
+    <!-- Global Filters -->
+    <div style="margin-bottom:2rem; background:var(--bg-surface); padding:1.25rem; border-radius:var(--radius-md); border:1px solid var(--border-color);">
+        <form action="<?= current_url() ?>" method="get" style="display:flex; align-items:flex-end; gap:1.25rem;">
+            <div style="flex:1;">
+                <label style="display:block; font-size:0.85rem; font-weight:500; color:var(--text-secondary); margin-bottom:0.5rem;">Filter by Date Range</label>
+                <div style="display:flex; align-items:center; gap:0.75rem;">
+                    <div style="flex:1;">
+                        <input type="date" name="from_date" class="form-control" value="<?= esc($filters['from_date'] ?? '') ?>" style="padding:0.6rem;">
+                    </div>
+                    <span style="color:var(--text-secondary); font-size:0.85rem;">to</span>
+                    <div style="flex:1;">
+                        <input type="date" name="to_date" class="form-control" value="<?= esc($filters['to_date'] ?? '') ?>" style="padding:0.6rem;">
+                    </div>
+                </div>
+            </div>
+            <div style="display:flex; gap:0.5rem;">
+                <button type="submit" class="btn btn-primary" style="padding: 0.65rem 1.5rem; display:flex; align-items:center; gap:6px;">
+                    <i data-lucide="filter" width="16"></i> Apply Filter
+                </button>
+                <?php if(!empty($filters['from_date']) || !empty($filters['to_date'])): ?>
+                    <a href="<?= base_url('customers/profile/' . $customer->id) ?>" class="btn btn-outline" style="padding: 0.65rem 1.25rem;">Clear</a>
+                <?php endif; ?>
+            </div>
+        </form>
+    </div>
+
     <!-- MAIN CONTENT TABS -->
     <div class="profile-tabs">
-        <div class="p-tab active" onclick="switchTab('trips', this)">Trip History (<?= count($trips) ?>)</div>
-        <div class="p-tab" onclick="switchTab('wallet', this)">Wallet History</div>
-        <div class="p-tab" onclick="switchTab('cards', this)">Cards (<?= isset($cards) ? count($cards) : 0 ?>)</div>
-        <div class="p-tab" onclick="switchTab('addresses', this)">Addresses (<?= count($addresses) ?>)</div>
-        <div class="p-tab" onclick="switchTab('ratings', this)">Ratings (<?= count($ratings) ?>)</div>
+        <div class="tab-labels">
+            <div class="p-tab active" onclick="switchTab('trips', this)">Trip History (<?= count($trips) ?>)</div>
+            <div class="p-tab" onclick="switchTab('wallet', this)">Wallet History</div>
+            <div class="p-tab" onclick="switchTab('cards', this)">Cards (<?= isset($cards) ? count($cards) : 0 ?>)</div>
+            <div class="p-tab" onclick="switchTab('addresses', this)">Addresses (<?= count($addresses) ?>)</div>
+            <div class="p-tab" onclick="switchTab('ratings', this)">Ratings (<?= count($ratings) ?>)</div>
+        </div>
+        <div class="tab-actions" id="tab-actions">
+            <!-- Dynamic button will be injected by JS -->
+        </div>
     </div>
 
     <!-- TRIP HISTORY TAB -->
@@ -234,8 +267,15 @@
                 <p>No trips found.</p>
             </div>
         <?php else: ?>
+            <div style="margin-bottom:1rem; display:flex; align-items:center; gap:8px; font-size:0.9rem; color:var(--text-secondary);">
+                <input type="checkbox" id="selectAllTrips" onclick="toggleAllTrips(this)">
+                <label for="selectAllTrips" style="margin:0; cursor:pointer;">Select All Trips</label>
+            </div>
             <?php foreach($trips as $t): ?>
             <div class="history-item">
+                <div style="margin-right:1rem;">
+                    <input type="checkbox" class="trip-checkbox" value="<?= $t->id ?>" onclick="updateTripBulkBtn()">
+                </div>
                 <div>
                     <div style="font-weight:700; color:var(--primary); font-family:monospace;">#<?= $t->trip_number ?></div>
                     <div style="font-size:0.8rem; color:var(--text-secondary);"><?= date('M d, Y', strtotime($t->created_at)) ?></div>
@@ -251,8 +291,11 @@
                     <div style="font-weight:700;">$<?= number_format($t->fare_amount, 2) ?></div>
                     <div style="font-size:0.75rem; color:var(--text-secondary);"><?= ucfirst($t->payment_method ?? 'cash') ?></div>
                 </div>
-                <div style="margin-left:1rem;">
+                <div style="margin-left:1.5rem; display:flex; align-items:center; gap:15px;">
                     <span class="status-badge status-<?= $t->status ?>"><?= $t->status ?></span>
+                    <a href="<?= base_url('dispatch/trips/print/' . $t->id) ?>" target="_blank" title="Print Receipt" style="color:var(--text-secondary);">
+                        <i data-lucide="printer" width="18"></i>
+                    </a>
                 </div>
             </div>
             <?php endforeach; ?>
@@ -261,12 +304,15 @@
 
     <!-- WALLET HISTORY TAB -->
     <div id="tab-wallet" class="tab-content" style="display:none;">
-        <div style="display:flex; justify-content:space-between; margin-bottom:1rem;">
-            <h3 class="h5">Recent Transactions</h3>
-            <div style="display:flex; gap:0.5rem;">
-               <button onclick="openWalletModal()" class="btn btn-primary"><i data-lucide="plus" width="16" style="margin-right:6px"></i> Add Funds</button>
-               <a href="<?= base_url('customers/print_statement/' . $customer->id) ?>" target="_blank" class="btn btn-outline"><i data-lucide="printer" width="16" style="margin-right:6px"></i> Print Statement</a>
-               <a href="<?= base_url('customers/export_statement/' . $customer->id) ?>" class="btn btn-outline"><i data-lucide="download" width="16" style="margin-right:6px"></i> Export CSV</a>
+        <div style="display:flex; justify-content:space-between; margin-bottom:1.5rem; align-items:center;">
+            <h3 class="h5" style="margin:0; font-weight:700;">Recent Transactions</h3>
+            <div style="display:flex; gap:1.5rem;">
+               <a href="<?= base_url('customers/print_statement/' . $customer->id) ?>" target="_blank" style="color:var(--text-secondary); text-decoration:none; display:flex; align-items:center; gap:8px; font-size:0.9rem; transition: color 0.2s;">
+                    <i data-lucide="printer" width="16"></i> Print Statement
+               </a>
+               <a href="<?= base_url('customers/export_statement/' . $customer->id) ?>" style="color:var(--text-secondary); text-decoration:none; display:flex; align-items:center; gap:8px; font-size:0.9rem; transition: color 0.2s;">
+                    <i data-lucide="download" width="16"></i> Export CSV
+               </a>
             </div>
         </div>
 
@@ -346,7 +392,6 @@
     <div id="tab-addresses" class="tab-content" style="display:none;">
         <div style="display:flex; justify-content:space-between; margin-bottom:1rem;">
             <h3 class="h5">Saved Addresses</h3>
-            <button onclick="openAddressModal()" class="btn btn-primary"><i data-lucide="plus" width="16" style="margin-right:6px"></i> Add Address</button>
         </div>
 
         <?php if(empty($addresses)): ?>
@@ -396,7 +441,6 @@
     <div id="tab-cards" class="tab-content" style="display:none;">
         <div style="display:flex; justify-content:space-between; margin-bottom:1rem;">
             <h3 class="h5">Saved Cards</h3>
-            <button onclick="openCardModal()" class="btn btn-primary"><i data-lucide="plus" width="16" style="margin-right:6px"></i> Add Card</button>
         </div>
 
         <?php if(empty($cards)): ?>
@@ -571,14 +615,66 @@
 </div>
 
 <script>
+    const tabActions = {
+        'trips': '<button id="bulkPrintBtn" onclick="bulkPrintSelected()" class="btn btn-outline" style="display:none; align-items:center; gap:6px; padding: 10px 20px; font-weight: 600;"><i data-lucide="printer" width="18"></i> Bulk Print (<span id="selectedTripCount">0</span>)</button>',
+        'wallet': '<button onclick="openWalletModal()" class="btn btn-primary" style="display:flex; align-items:center; gap:6px; padding: 10px 20px; font-weight: 600;"><i data-lucide="plus" width="18"></i> Add Funds</button>',
+        'cards': '<button onclick="openCardModal()" class="btn btn-primary" style="display:flex; align-items:center; gap:6px; padding: 10px 20px; font-weight: 600;"><i data-lucide="plus" width="18"></i> Add Card</button>',
+        'addresses': '<button onclick="openAddressModal()" class="btn btn-primary" style="display:flex; align-items:center; gap:6px; padding: 10px 20px; font-weight: 600;"><i data-lucide="plus" width="18"></i> Add Address</button>',
+    };
+
     function switchTab(tabName, el) {
         document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
         document.getElementById('tab-' + tabName).style.display = 'block';
         document.querySelectorAll('.p-tab').forEach(t => t.classList.remove('active'));
-        el.classList.add('active');
+        if(el) el.classList.add('active');
+
+        // Update actions
+        const actionsDiv = document.getElementById('tab-actions');
+        if(actionsDiv) {
+            actionsDiv.innerHTML = tabActions[tabName] || '';
+            if(typeof lucide !== 'undefined') lucide.createIcons();
+        }
     }
+
+    // Initialize first tab actions
+    document.addEventListener('DOMContentLoaded', () => {
+        const activeTab = document.querySelector('.p-tab.active');
+        if(activeTab) {
+            const firstTabName = activeTab.getAttribute('onclick').match(/'([^']+)'/)[1];
+            switchTab(firstTabName, activeTab);
+        }
+    });
     function openWalletModal() { document.getElementById('walletModal').classList.add('active'); }
     function closeWalletModal() { document.getElementById('walletModal').classList.remove('active'); }
+
+    function toggleAllTrips(source) {
+        const checkboxes = document.querySelectorAll('#tab-trips .trip-checkbox');
+        checkboxes.forEach(cb => cb.checked = source.checked);
+        updateTripBulkBtn();
+    }
+
+    function updateTripBulkBtn() {
+        const checkboxes = document.querySelectorAll('#tab-trips .trip-checkbox:checked');
+        const bulkBtn = document.getElementById('bulkPrintBtn');
+        const countSpan = document.getElementById('selectedTripCount');
+        
+        if (bulkBtn) {
+            if (checkboxes.length > 0) {
+                bulkBtn.style.display = 'inline-flex';
+                countSpan.innerText = checkboxes.length;
+            } else {
+                bulkBtn.style.display = 'none';
+            }
+        }
+    }
+
+    function bulkPrintSelected() {
+        const checkboxes = document.querySelectorAll('#tab-trips .trip-checkbox:checked');
+        const ids = Array.from(checkboxes).map(cb => cb.value).join(',');
+        if (ids) {
+            window.open('<?= base_url('dispatch/trips/bulk_print') ?>?ids=' + ids, '_blank');
+        }
+    }
 
     // Card Modal
     function openCardModal() { document.getElementById('cardModal').classList.add('active'); }

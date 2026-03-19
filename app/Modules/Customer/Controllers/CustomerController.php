@@ -161,8 +161,10 @@ class CustomerController extends BaseController
             return redirect()->to('/customers')->with('error', 'Customer not found');
         }
 
+        $fromDate = $this->request->getVar('from_date');
+        $toDate = $this->request->getVar('to_date');
+
         // Fetch Trips
-        // Assuming TripModel is in Modules\Dispatch\Models\TripModel
         $tripModel = new \Modules\Dispatch\Models\TripModel();
         
         // Use builder to get driver names for history
@@ -170,6 +172,10 @@ class CustomerController extends BaseController
         $builder->select('trips.*, drivers.first_name as d_first, drivers.last_name as d_last');
         $builder->join('drivers', 'drivers.id = trips.driver_id', 'left');
         $builder->where('trips.customer_id', $id);
+        
+        if ($fromDate) $builder->where('trips.created_at >=', $fromDate . ' 00:00:00');
+        if ($toDate)   $builder->where('trips.created_at <=', $toDate   . ' 23:59:59');
+
         $builder->orderBy('trips.created_at', 'DESC');
         $trips = $builder->get()->getResult();
 
@@ -182,9 +188,13 @@ class CustomerController extends BaseController
 
         // Fetch Wallet Transactions
         $txModel = new WalletTransactionModel();
-        $transactions = $txModel->where('user_type', 'customer')
-                                ->where('user_id', $id)
-                                ->orderBy('created_at', 'DESC')
+        $txQuery = $txModel->where('user_type', 'customer')
+                           ->where('user_id', $id);
+        
+        if ($fromDate) $txQuery->where('created_at >=', $fromDate . ' 00:00:00');
+        if ($toDate)   $txQuery->where('created_at <=', $toDate   . ' 23:59:59');
+
+        $transactions = $txQuery->orderBy('created_at', 'DESC')
                                 ->findAll();
 
         // Fetch Ratings
@@ -235,7 +245,11 @@ class CustomerController extends BaseController
                 'wallet_balance' => $computedWalletBalance,
                 'total_deposited' => $totalDeposits
             ],
-            'title' => $customer->first_name . ' ' . $customer->last_name . ' - Profile'
+            'title' => $customer->first_name . ' ' . $customer->last_name . ' - Profile',
+            'filters' => [
+                'from_date' => $fromDate,
+                'to_date' => $toDate
+            ]
         ];
 
         return view('Modules\Customer\Views\profile', $data);

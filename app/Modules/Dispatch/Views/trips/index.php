@@ -5,15 +5,19 @@
 <style>
     /* Layout Grid: Content + Sidebar */
     .dispatch-layout {
-        display: block;
+        display: flex;
+        flex-direction: column;
         gap: 1.5rem;
-        height: calc(100vh - 100px); /* Adjust based on navbar height */
+        flex: 1; /* Allow to fill remaining space in the viewport */
+        min-height: 0; /* Important for flex children to be scrollable */
         overflow: hidden;
     }
     .dispatch-main {
         display: flex;
         flex-direction: column;
-        overflow: hidden; /* Scroll inside lists */
+        flex: 1;
+        min-height: 0;
+        overflow: hidden; /* The actual scrolling will happen inside .tab-pane */
     }
     /* Sidebar removed as per simplification request */
 
@@ -62,8 +66,8 @@
     }
 
     /* Tab Content - Scalable Lists */
-    .tab-pane { display: none; flex: 1; overflow-y: auto; padding-right: 4px; }
-    .tab-pane.active { display: block; }
+    .tab-pane { display: none; flex: 1; overflow-y: auto; padding-right: 4px; min-height: 0; }
+    .tab-pane.active { display: flex; flex-direction: column; }
     
     /* Trip Item (Premium Card) */
     .trip-wrapper {
@@ -82,7 +86,7 @@
     .trip-card {
         padding: 1rem;
         display: grid;
-        grid-template-columns: 80px 1.5fr 1.25fr 100px 130px; /* Status, Route, Customer/Driver, Price, Action */
+        grid-template-columns: 40px 80px 1.5fr 1.25fr 100px 130px; /* Checkbox, Status, Route, Customer/Driver, Price, Action */
         gap: 1rem;
         align-items: center;
         cursor: pointer;
@@ -213,13 +217,25 @@
                         </select>
                     </div>
 
-                    <div style="width: 150px;">
-                        <input type="date" name="date" class="form-control" value="<?= esc($filters['date'] ?? '') ?>" style="width: 100%; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 4px;">
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <input type="date" name="from_date" class="form-control" title="From Date" value="<?= esc($filters['from_date'] ?? '') ?>" style="width: 140px; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 4px;">
+                        <span style="color:var(--text-secondary); font-size:0.8rem;">to</span>
+                        <input type="date" name="to_date" class="form-control" title="To Date" value="<?= esc($filters['to_date'] ?? '') ?>" style="width: 140px; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 4px;">
                     </div>
 
                     <button type="submit" class="btn btn-primary" style="padding: 0.5rem 1rem;">Search</button>
                     <a href="<?= base_url('dispatch/trips') ?>" class="btn btn-outline" style="padding: 0.5rem 1rem; text-decoration: none; border: 1px solid var(--border-color); color: var(--text-secondary); border-radius: 4px; display: inline-flex; align-items: center;">Clear</a>
+                    
+                    <button id="bulkPrintTripBtn" type="button" onclick="bulkPrintSelectedTrips()" class="btn btn-outline" style="display:none; align-items:center; gap:6px; padding: 0.5rem 1rem; font-weight: 600; border-color: var(--primary); color: var(--primary);">
+                        <i data-lucide="printer" width="16"></i> Bulk Print (<span id="selectedTripCount">0</span>)
+                    </button>
                 </form>
+            </div>
+
+            <!-- Global Selection Toggle -->
+            <div style="padding: 0 1rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text-secondary);">
+                <input type="checkbox" id="selectAllTrips" onclick="toggleAllTrips(this)">
+                <label for="selectAllTrips" style="cursor: pointer; margin: 0;">Select All on Current View</label>
             </div>
 
             <!-- Tabs -->
@@ -463,6 +479,41 @@
         document.getElementById('tab-' + tabId).classList.add('active');
         const activeBtn = document.querySelector(`.tab-btn[onclick*="${tabId}"]`);
         if(activeBtn) activeBtn.classList.add('active');
+
+        // Reset selection when switching tabs
+        document.getElementById('selectAllTrips').checked = false;
+        document.querySelectorAll('.trip-checkbox').forEach(cb => cb.checked = false);
+        updateTripBulkBtn();
+    }
+
+    function toggleAllTrips(source) {
+        const activePane = document.querySelector('.tab-pane.active');
+        const checkboxes = activePane.querySelectorAll('.trip-checkbox');
+        checkboxes.forEach(cb => cb.checked = source.checked);
+        updateTripBulkBtn();
+    }
+
+    function updateTripBulkBtn() {
+        const checkboxes = document.querySelectorAll('.trip-checkbox:checked');
+        const bulkBtn = document.getElementById('bulkPrintTripBtn');
+        const countSpan = document.getElementById('selectedTripCount');
+        
+        if (bulkBtn) {
+            if (checkboxes.length > 0) {
+                bulkBtn.style.display = 'inline-flex';
+                countSpan.innerText = checkboxes.length;
+            } else {
+                bulkBtn.style.display = 'none';
+            }
+        }
+    }
+
+    function bulkPrintSelectedTrips() {
+        const checkboxes = document.querySelectorAll('.trip-checkbox:checked');
+        const ids = Array.from(checkboxes).map(cb => cb.value).join(',');
+        if (ids) {
+            window.open('<?= base_url('dispatch/trips/bulk_print') ?>?ids=' + ids, '_blank');
+        }
     }
 
     function openAssignModal(tripId) {

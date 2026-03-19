@@ -12,7 +12,7 @@ class WalletTransactionModel extends Model
     protected $returnType       = 'array';
     protected $useSoftDeletes   = false;
     protected $allowedFields    = [
-        'user_type', 'user_id', 'type', 'amount', 'description', 'transaction_id'
+        'user_type', 'user_id', 'type', 'payment_method', 'bank_account_id', 'amount', 'description', 'transaction_id'
     ];
 
     protected $useTimestamps = true;

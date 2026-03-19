@@ -79,7 +79,7 @@ body {
     background-color: var(--bg-body);
     color: var(--text-primary);
     line-height: 1.5;
-    height: 100vh;
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
     overflow-x: hidden;
@@ -579,6 +579,8 @@ ul {
 }
 
 .main-content {
+    flex: 1;
+}
 
     /* -------------------------------------------------------------------------- */
     /*                              Call & Panel UI                               */

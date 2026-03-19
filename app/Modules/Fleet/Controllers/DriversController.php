@@ -154,19 +154,29 @@ class DriversController extends BaseController
              return redirect()->to('/drivers')->with('error', 'Driver not found');
         }
 
+        $fromDate = $this->request->getVar('from_date');
+        $toDate = $this->request->getVar('to_date');
+
         // Fetch Wallet Transactions
         $txModel = new WalletTransactionModel();
-        $transactions = $txModel->where('user_type', 'driver')
-                                ->where('user_id', $id)
-                                ->orderBy('created_at', 'DESC')
+        $txQuery = $txModel->where('user_type', 'driver')
+                           ->where('user_id', $id);
+        
+        if ($fromDate) $txQuery->where('created_at >=', $fromDate . ' 00:00:00');
+        if ($toDate)   $txQuery->where('created_at <=', $toDate   . ' 23:59:59');
+
+        $transactions = $txQuery->orderBy('created_at', 'DESC')
                                 ->findAll();
         
-        // Mock Trip Data (replace with real TripModel if available)
-        // Assuming TripModel is in Modules\Dispatch\Models\TripModel
         $trips = [];
         try {
              $tripModel = new \Modules\Dispatch\Models\TripModel();
-             $trips = $tripModel->where('driver_id', $id)->orderBy('created_at', 'DESC')->findAll();
+             $tripQuery = $tripModel->where('driver_id', $id);
+             
+             if ($fromDate) $tripQuery->where('created_at >=', $fromDate . ' 00:00:00');
+             if ($toDate)   $tripQuery->where('created_at <=', $toDate   . ' 23:59:59');
+             
+             $trips = $tripQuery->orderBy('created_at', 'DESC')->findAll();
         } catch(\Exception $e) {
              // Model invalid or not found
         }
@@ -176,6 +186,10 @@ class DriversController extends BaseController
                                      ->where('ratee_id', $id)
                                      ->orderBy('created_at', 'DESC')
                                      ->findAll();
+
+        // Fetch Bank Accounts
+        $bankModel = new \Modules\Fleet\Models\DriverBankModel();
+        $bankAccounts = $bankModel->where('driver_id', $id)->orderBy('is_default', 'DESC')->findAll();
 
         // Calculate Stats
         $totalEarnings = 0;
@@ -224,6 +238,7 @@ class DriversController extends BaseController
             'transactions' => $transactions,
             'trips'        => $trips,
             'ratings'      => $ratings,
+            'bankAccounts' => $bankAccounts,
             'stats' => [
                 'total_earnings'       => $totalEarnings,
                 'trips_completed'      => count(array_filter($trips, fn($t) => $t->status == 'completed')),
@@ -238,7 +253,11 @@ class DriversController extends BaseController
                 'already_paid'         => $totalWithdrawals - $totalDeposits,
                 'wallet_balance'       => $computedWalletBalance,
             ],
-            'title' => $driver->first_name . ' ' . $driver->last_name . ' - Profile'
+            'title' => $driver->first_name . ' ' . $driver->last_name . ' - Profile',
+            'filters' => [
+                'from_date' => $fromDate,
+                'to_date' => $toDate
+            ]
         ];
 
         return view('Modules\Fleet\Views\drivers\profile', $data);
@@ -250,7 +269,9 @@ class DriversController extends BaseController
             'driver_id' => 'required|integer',
             'amount' => 'required|numeric|greater_than[0]',
             'type' => 'required|in_list[deposit,withdrawal]',
-            'description' => 'required'
+            'description' => 'required',
+            'payment_method' => 'permit_empty|in_list[bank,cheque]',
+            'bank_account_id' => 'permit_empty|integer'
         ];
 
         if (!$this->validate($rules)) {
@@ -261,6 +282,8 @@ class DriversController extends BaseController
         $amount = $this->request->getPost('amount');
         $type = $this->request->getPost('type');
         $description = $this->request->getPost('description');
+        $paymentMethod = $this->request->getPost('payment_method');
+        $bankAccountId = $this->request->getPost('bank_account_id');
 
         $driver = $this->driverModel->find($driverId);
         if(!$driver) return redirect()->back()->with('error', 'Driver not found');
@@ -274,6 +297,8 @@ class DriversController extends BaseController
             'user_type'   => 'driver',
             'user_id'     => $driverId,
             'type'        => $type,
+            'payment_method' => $paymentMethod,
+            'bank_account_id' => ($paymentMethod == 'bank') ? $bankAccountId : null,
             'amount'      => $amount,
             'description' => $description,
             'created_at'  => date('Y-m-d H:i:s')
@@ -289,10 +314,9 @@ class DriversController extends BaseController
         $commissionRate = $driver->commission_rate ?? 25.00;
         WalletService::syncBalance('driver', (int)$driverId, (float)$commissionRate);
 
-        // For withdrawals, redirect to the printable cheque page
-        if ($type === 'withdrawal') {
-            $txId = (new WalletTransactionModel())->db->insertID();
-            // Fallback: get the latest tx for this driver
+        // For cheque withdrawals, redirect to the printable cheque page
+        if ($type === 'withdrawal' && $paymentMethod === 'cheque') {
+            // Get the latest tx for this driver
             $latestTx = (new WalletTransactionModel())
                 ->where('user_type', 'driver')
                 ->where('user_id', $driverId)
@@ -335,6 +359,14 @@ class DriversController extends BaseController
         if (!$tx) {
             return redirect()->to('/drivers')->with('error', 'Transaction not found.');
         }
+
+        // Log the print event
+        $db = \Config\Database::connect();
+        $db->table('cheque_print_logs')->insert([
+            'transaction_id' => $txId,
+            'printed_at'     => date('Y-m-d H:i:s'),
+            'printed_by'     => session()->get('user_id')
+        ]);
 
         $driver = $this->driverModel->find($tx['user_id']);
         if (!$driver) {
@@ -453,5 +485,73 @@ class DriversController extends BaseController
 
         fclose($out);
         exit;
+    }
+
+    public function addBank($driverId)
+    {
+        $bankModel = new \Modules\Fleet\Models\DriverBankModel();
+        
+        $data = [
+            'driver_id'      => $driverId,
+            'bank_name'      => $this->request->getPost('bank_name'),
+            'account_name'   => $this->request->getPost('account_name'),
+            'account_number' => $this->request->getPost('account_number'),
+            'routing_number' => $this->request->getPost('routing_number'),
+            'swift_code'     => $this->request->getPost('swift_code'),
+            'is_default'     => $this->request->getPost('is_default') ? 1 : 0
+        ];
+
+        if ($data['is_default']) {
+            $bankModel->where('driver_id', $driverId)->set(['is_default' => 0])->update();
+        }
+
+        if ($bankModel->save($data)) {
+            return redirect()->back()->with('success', 'Bank account added successfully');
+        }
+
+        return redirect()->back()->with('error', 'Failed to add bank account');
+    }
+
+    public function setDefaultBank($id)
+    {
+        $bankModel = new \Modules\Fleet\Models\DriverBankModel();
+        $account = $bankModel->find($id);
+        
+        if (!$account) {
+            return redirect()->back()->with('error', 'Account not found');
+        }
+
+        if ($bankModel->setDefault($id, $account->driver_id)) {
+            return redirect()->back()->with('success', 'Default bank account updated');
+        }
+
+        return redirect()->back()->with('error', 'Failed to update default account');
+    }
+
+    public function deleteBank($id)
+    {
+        $bankModel = new \Modules\Fleet\Models\DriverBankModel();
+        if ($bankModel->delete($id)) {
+            return redirect()->back()->with('success', 'Bank account deleted');
+        }
+        return redirect()->back()->with('error', 'Failed to delete account');
+    }
+
+    /**
+     * Get the printing history for a transaction via AJAX.
+     */
+    public function getPrintHistory(int $txId)
+    {
+        $db = \Config\Database::connect();
+        $logs = $db->table('cheque_print_logs')
+                   ->where('transaction_id', $txId)
+                   ->orderBy('printed_at', 'DESC')
+                   ->get()->getResult();
+
+        return $this->response->setJSON([
+            'success' => true,
+            'count'   => count($logs),
+            'logs'    => $logs
+        ]);
     }
 }

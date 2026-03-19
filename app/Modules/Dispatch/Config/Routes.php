@@ -18,6 +18,7 @@ $routes->group('dispatch', ['namespace' => 'Modules\Dispatch\Controllers'], func
     $routes->get('trips/new', 'TripController::new');
     $routes->get('trips/view/(:num)', 'TripController::view/$1'); // Details View
     $routes->get('trips/print/(:num)', 'TripController::printTrip/$1'); // Print Receipt
+    $routes->match(['get', 'post'], 'trips/bulk_print', 'TripController::bulkPrint');
     $routes->get('trips/edit/(:num)', 'TripController::edit/$1');
     $routes->post('trips/update/(:num)', 'TripController::update/$1');
     $routes->get('trips/delete/(:num)', 'TripController::delete/$1');

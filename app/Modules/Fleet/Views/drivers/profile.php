@@ -56,10 +56,12 @@
     .balance-val-neg { color: #d97706; } /* Amber/Orange for owing */
     
     /* Tabs */
-    .profile-tabs { border-bottom: 1px solid var(--border-color); margin-bottom: 1.5rem; display: flex; gap: 2rem; }
+    .profile-tabs { border-bottom: 1px solid var(--border-color); margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: flex-end; }
+    .tab-labels { display: flex; gap: 2rem; }
     .p-tab { padding-bottom: 1rem; font-weight: 600; color: var(--text-secondary); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; }
     .p-tab:hover { color: var(--text-primary); }
     .p-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+    .tab-actions { padding-bottom: 0.5rem; }
 
     /* History */
     .history-item { background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 1.25rem; margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; }
@@ -95,9 +97,20 @@
     .stars { color: var(--warning); display: flex; align-items: center; gap: 2px; }
     .rating-comment { font-size: 0.9rem; color: var(--text-primary); margin-bottom: 0.75rem; line-height: 1.5; font-style: italic; background: var(--bg-body); padding: 0.75rem; border-radius: var(--radius-sm); }
     .rating-footer { font-size: 0.75rem; color: var(--text-secondary); display: flex; justify-content: space-between; align-items: center; }
+
+    /* Spinner */
+    .spinner {
+        width: 32px; height: 32px;
+        border: 3px solid rgba(var(--primary-rgb), 0.1);
+        border-top-color: var(--primary);
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        margin: 0 auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
 </style>
 
-<div style="padding: 2rem; max-width: 1400px; margin: 0 auto;">
+<div style="padding: 2rem; max-width: 1400px; margin: 0 auto; padding-bottom: 5rem;">
     
     <!-- Breadcrumb -->
     <div style="margin-bottom: 1.5rem;">
@@ -225,11 +238,43 @@
 
     </div>
 
+    <!-- Global Filters -->
+    <div style="margin-bottom:2rem; background:var(--bg-surface); padding:1.25rem; border-radius:var(--radius-md); border:1px solid var(--border-color);">
+        <form action="<?= current_url() ?>" method="get" style="display:flex; align-items:flex-end; gap:1.25rem;">
+            <div style="flex:1;">
+                <label style="display:block; font-size:0.85rem; font-weight:500; color:var(--text-secondary); margin-bottom:0.5rem;">Filter by Date Range</label>
+                <div style="display:flex; align-items:center; gap:0.75rem;">
+                    <div style="flex:1;">
+                        <input type="date" name="from_date" class="form-control" value="<?= esc($filters['from_date'] ?? '') ?>" style="padding:0.6rem;">
+                    </div>
+                    <span style="color:var(--text-secondary); font-size:0.85rem;">to</span>
+                    <div style="flex:1;">
+                        <input type="date" name="to_date" class="form-control" value="<?= esc($filters['to_date'] ?? '') ?>" style="padding:0.6rem;">
+                    </div>
+                </div>
+            </div>
+            <div style="display:flex; gap:0.5rem;">
+                <button type="submit" class="btn btn-primary" style="padding: 0.65rem 1.5rem; display:flex; align-items:center; gap:6px;">
+                    <i data-lucide="filter" width="16"></i> Apply Filter
+                </button>
+                <?php if(!empty($filters['from_date']) || !empty($filters['to_date'])): ?>
+                    <a href="<?= base_url('drivers/profile/' . $driver->id) ?>" class="btn btn-outline" style="padding: 0.65rem 1.25rem;">Clear</a>
+                <?php endif; ?>
+            </div>
+        </form>
+    </div>
+
     <!-- Main Content -->
      <div class="profile-tabs">
-        <div class="p-tab active" onclick="switchTab('trips', this)">Trip History (<?= count($trips) ?>)</div>
-        <div class="p-tab" onclick="switchTab('wallet', this)">Payout History (<?= count($transactions) ?>)</div>
-        <div class="p-tab" onclick="switchTab('ratings', this)">Ratings (<?= count($ratings) ?>)</div>
+        <div class="tab-labels">
+            <div class="p-tab active" onclick="switchTab('trips', this)">Trip History (<?= count($trips) ?>)</div>
+            <div class="p-tab" onclick="switchTab('wallet', this)">Payout History (<?= count($transactions) ?>)</div>
+            <div class="p-tab" onclick="switchTab('bank', this)">Bank Details (<?= count($bankAccounts) ?>)</div>
+            <div class="p-tab" onclick="switchTab('ratings', this)">Ratings (<?= count($ratings) ?>)</div>
+        </div>
+        <div class="tab-actions" id="tab-actions">
+            <!-- Dynamic button will be injected by JS -->
+        </div>
     </div>
 
     <div id="tab-trips" class="tab-content">
@@ -239,8 +284,15 @@
                 <p>No trips found.</p>
             </div>
         <?php else: ?>
+            <div style="margin-bottom:1rem; display:flex; align-items:center; gap:8px; font-size:0.9rem; color:var(--text-secondary);">
+                <input type="checkbox" id="selectAllTrips" onclick="toggleAllTrips(this)">
+                <label for="selectAllTrips" style="margin:0; cursor:pointer;">Select All Trips</label>
+            </div>
             <?php foreach($trips as $t): ?>
             <div class="history-item">
+                <div style="margin-right:1rem;">
+                    <input type="checkbox" class="trip-checkbox" value="<?= $t->id ?>" onclick="updateTripBulkBtn()">
+                </div>
                 <div>
                     <div style="font-weight:700; color:var(--primary); font-family:monospace;">#<?= $t->trip_number ?></div>
                     <div style="font-size:0.8rem; color:var(--text-secondary);"><?= date('M d, Y', strtotime($t->created_at)) ?></div>
@@ -256,8 +308,11 @@
                     <div style="font-weight:700;">$<?= number_format($t->fare_amount, 2) ?></div>
                     <div style="font-size:0.75rem; color:var(--text-secondary);"><?= ucfirst($t->payment_method ?? 'cash') ?></div>
                 </div>
-                <div style="margin-left:1rem;">
+                <div style="margin-left:1.5rem; display:flex; align-items:center; gap:15px;">
                     <span class="status-badge status-<?= $t->status ?>"><?= $t->status ?></span>
+                    <a href="<?= base_url('dispatch/trips/print/' . $t->id) ?>" target="_blank" title="Print Receipt" style="color:var(--text-secondary);">
+                        <i data-lucide="printer" width="18"></i>
+                    </a>
                 </div>
             </div>
             <?php endforeach; ?>
@@ -265,12 +320,15 @@
     </div>
 
     <div id="tab-wallet" class="tab-content" style="display:none;">
-        <div style="display:flex; justify-content:space-between; margin-bottom:1rem;">
-            <h3 class="h5">Recent Transactions</h3>
-            <div style="display:flex; gap:0.5rem;">
-               <button onclick="openWalletModal()" class="btn btn-primary"><i data-lucide="dollar-sign" width="16" style="margin-right:6px"></i> Record Payout</button>
-               <a href="<?= base_url('drivers/print_statement/' . $driver->id) ?>" target="_blank" class="btn btn-outline"><i data-lucide="printer" width="16" style="margin-right:6px"></i> Print Statement</a>
-               <a href="<?= base_url('drivers/export_statement/' . $driver->id) ?>" class="btn btn-outline"><i data-lucide="download" width="16" style="margin-right:6px"></i> Export CSV</a>
+        <div style="display:flex; justify-content:space-between; margin-bottom:1.5rem; align-items:center;">
+            <h3 class="h5" style="margin:0; font-weight:700;">Recent Transactions</h3>
+            <div style="display:flex; gap:1.5rem;">
+               <a href="<?= base_url('drivers/print_statement/' . $driver->id) ?>" target="_blank" style="color:var(--text-secondary); text-decoration:none; display:flex; align-items:center; gap:8px; font-size:0.9rem; transition: color 0.2s;">
+                    <i data-lucide="printer" width="16"></i> Print Statement
+               </a>
+               <a href="<?= base_url('drivers/export_statement/' . $driver->id) ?>" style="color:var(--text-secondary); text-decoration:none; display:flex; align-items:center; gap:8px; font-size:0.9rem; transition: color 0.2s;">
+                    <i data-lucide="download" width="16"></i> Export CSV
+               </a>
             </div>
         </div>
 
@@ -302,11 +360,24 @@
                                 <?= in_array($tx['type'], ['deposit','refund']) ? '+' : '-' ?>$<?= number_format($tx['amount'], 2) ?>
                             </td>
                             <td style="padding:1rem; text-align:center;">
-                                <?php if ($tx['type'] === 'withdrawal'): ?>
-                                    <a href="<?= base_url('drivers/cheque/' . $tx['id']) ?>" target="_blank"
-                                       style="font-size:0.78rem; color:var(--primary); text-decoration:none; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;">
-                                        🖨 Print
-                                    </a>
+                                <?php if ($tx['type'] === 'withdrawal' && ($tx['payment_method'] ?? 'cheque') !== 'bank'): ?>
+                                    <div style="display:flex; align-items:center; justify-content:center; gap:8px;">
+                                        <a href="<?= base_url('drivers/cheque/' . $tx['id']) ?>" target="_blank"
+                                           class="btn btn-sm"
+                                           style="font-size:0.75rem; color:var(--primary); text-decoration:none; display:inline-flex; align-items:center; gap:4px; white-space:nowrap; padding:4px 8px; border:1px solid rgba(var(--primary-rgb), 0.2); border-radius:4px;">
+                                            🖨 Print
+                                        </a>
+                                        <button onclick="showPrintHistory(<?= $tx['id'] ?>)" 
+                                                class="btn btn-sm btn-outline" 
+                                                title="Print History"
+                                                style="padding:4px 6px; display:inline-flex; align-items:center; justify-content:center;">
+                                            <i data-lucide="history" width="14"></i>
+                                        </button>
+                                    </div>
+                                <?php elseif($tx['type'] === 'withdrawal'): ?>
+                                    <span style="font-size:0.75rem; color:var(--text-secondary); display:flex; align-items:center; justify-content:center; gap:4px;">
+                                        <i data-lucide="landmark" width="14"></i> Bank
+                                    </span>
                                 <?php else: ?>
                                     <span style="color:var(--text-secondary);">—</span>
                                 <?php endif; ?>
@@ -315,6 +386,60 @@
                     <?php endforeach; ?>
                 </tbody>
             </table>
+        <?php endif; ?>
+    </div>
+    
+    <!-- BANK DETAILS TAB -->
+    <div id="tab-bank" class="tab-content" style="display:none;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:1.5rem; align-items:center;">
+            <h3 class="h5" style="margin:0; font-weight:700;">Driver Bank Accounts</h3>
+        </div>
+
+        <?php if(empty($bankAccounts)): ?>
+            <div style="text-align:center; padding:3rem; color:var(--text-secondary); background:var(--bg-surface); border:1px dashed var(--border-color); border-radius:var(--radius-md);">
+                <i data-lucide="landmark" width="48" style="opacity:0.2; margin-bottom:1rem;"></i>
+                <p>No bank accounts added yet.</p>
+            </div>
+        <?php else: ?>
+            <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap:1rem;">
+                <?php foreach($bankAccounts as $acc): ?>
+                    <div style="background:var(--bg-surface); border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:1.25rem; position:relative;">
+                        <?php if($acc->is_default): ?>
+                            <span style="position:absolute; top:15px; right:15px; background:var(--success); color:#fff; font-size:0.7rem; padding:3px 8px; border-radius:12px; font-weight:600; text-transform:uppercase;">Primary</span>
+                        <?php endif; ?>
+                        
+                        <div style="display:flex; align-items:center; gap:12px; margin-bottom:1rem;">
+                            <div style="width:40px; height:40px; border-radius:8px; background:var(--bg-body); display:flex; align-items:center; justify-content:center; color:var(--text-secondary);">
+                                <i data-lucide="landmark" width="20"></i>
+                            </div>
+                            <div>
+                                <div style="font-weight:700; color:var(--text-primary);"><?= esc($acc->bank_name) ?></div>
+                                <div style="font-size:0.8rem; color:var(--text-secondary);"><?= esc($acc->account_name) ?></div>
+                            </div>
+                        </div>
+                        
+                        <div style="background:var(--bg-body); padding:1rem; border-radius:var(--radius-sm); border:1px solid var(--border-color); margin-bottom:1rem; font-family:monospace; font-size:1.1rem; letter-spacing:1px; text-align:center;">
+                            <?= esc($acc->account_number) ?>
+                        </div>
+
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; margin-bottom:1rem;">
+                           <div style="font-size:0.8rem; color:var(--text-secondary);">Routing Num: <span style="color:var(--text-primary); font-weight:500;"><?= esc($acc->routing_number ?: '—') ?></span></div>
+                           <div style="font-size:0.8rem; color:var(--text-secondary);">SWIFT: <span style="color:var(--text-primary); font-weight:500;"><?= esc($acc->swift_code ?: '—') ?></span></div>
+                        </div>
+
+                        <div style="display:flex; gap:0.5rem; padding-top:1rem; border-top:1px solid var(--border-color);">
+                            <?php if(!$acc->is_default): ?>
+                                <a href="<?= base_url('drivers/set_default_bank/' . $acc->id) ?>" class="btn btn-sm btn-outline" style="flex:1;">Set as Default</a>
+                            <?php else: ?>
+                                <button class="btn btn-sm btn-outline" disabled style="flex:1; opacity:0.5; cursor:not-allowed;">Default Account</button>
+                            <?php endif; ?>
+                            <a href="<?= base_url('drivers/delete_bank/' . $acc->id) ?>" onclick="return confirm('Remove this bank account?')" class="btn btn-sm btn-outline text-danger" style="flex:0 0 40px; display:flex; align-items:center; justify-content:center;">
+                                <i data-lucide="trash-2" width="16"></i>
+                            </a>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
         <?php endif; ?>
     </div>
 
@@ -368,10 +493,33 @@
             
             <div class="form-group">
                 <label class="form-label">Transaction Type</label>
-                <select name="type" class="form-control">
+                <select name="type" class="form-control" onchange="togglePayoutMethods(this.value)">
                     <option value="deposit">Deposit (Driver Pays Company)</option>
                     <option value="withdrawal">Withdrawal (Company Pays Driver)</option>
                 </select>
+            </div>
+
+            <div id="payoutMethodSection" style="display:none;">
+                <div class="form-group">
+                    <label class="form-label">Payout Method</label>
+                    <select name="payment_method" class="form-control" onchange="toggleBankList(this.value)">
+                        <option value="cheque">Cheque</option>
+                        <option value="bank">Bank Transfer</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="bankListSection" style="display:none;">
+                    <label class="form-label">Select Bank Account</label>
+                    <select name="bank_account_id" class="form-control">
+                        <?php if(empty($bankAccounts)): ?>
+                            <option value="">No bank accounts linked</option>
+                        <?php else: ?>
+                            <?php foreach($bankAccounts as $acc): ?>
+                                <option value="<?= $acc->id ?>"><?= $acc->is_default ? '[PRIMARY] ' : '' ?><?= esc($acc->bank_name) ?> - <?= esc($acc->account_number) ?></option>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </select>
+                </div>
             </div>
 
             <div class="form-group">
@@ -386,6 +534,23 @@
 
             <button type="submit" class="btn btn-primary btn-block">Confirm Transaction</button>
         </form>
+    </div>
+</div>
+
+<!-- Print History Modal -->
+<div id="historyModal" class="modal">
+    <div class="modal-content" style="width: 400px; max-width: 90%;">
+        <span class="close" onclick="closeHistoryModal()">&times;</span>
+        <h3 style="margin-bottom:1.5rem; display:flex; align-items:center; gap:10px;">
+            <i data-lucide="history" class="text-primary"></i> 
+            Print History
+        </h3>
+        <div id="historyContent">
+            <div style="text-align:center; padding:2rem;">
+                <div class="spinner"></div>
+                <p style="margin-top:1rem; color:var(--text-secondary);">Fetching records...</p>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -410,18 +575,165 @@
     </div>
 </div>
 
+<!-- Bank Modal -->
+<div id="bankModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeBankModal()">&times;</span>
+        <h2 style="margin-bottom:1.5rem;">Add Bank Account</h2>
+        <form action="<?= base_url('drivers/add_bank/' . $driver->id) ?>" method="post">
+            
+            <div class="form-group">
+                <label class="form-label">Bank Name</label>
+                <input type="text" name="bank_name" class="form-control" placeholder="e.g. Chase Bank, HSBC" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Account Holder Name</label>
+                <input type="text" name="account_name" class="form-control" value="<?= esc($driver->first_name . ' ' . $driver->last_name) ?>" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Account Number</label>
+                <input type="text" name="account_number" class="form-control" required>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
+                <div class="form-group">
+                    <label class="form-label">Routing Number (Optional)</label>
+                    <input type="text" name="routing_number" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">SWIFT / BIC (Optional)</label>
+                    <input type="text" name="swift_code" class="form-control">
+                </div>
+            </div>
+
+            <div class="form-group" style="display:flex; align-items:center; gap:8px;">
+                <input type="checkbox" name="is_default" id="bankDefault" checked>
+                <label for="bankDefault" style="margin:0; font-size:0.9rem;">Set as default payout account</label>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block">Link Bank Account</button>
+        </form>
+    </div>
+</div>
+
 <script>
+    const tabActions = {
+        'trips': '<button id="bulkPrintTripBtn" onclick="bulkPrintSelectedTrips()" class="btn btn-outline" style="display:none; align-items:center; gap:6px; padding: 10px 20px; font-weight: 600;"><i data-lucide="printer" width="18"></i> Bulk Print (<span id="selectedTripCount">0</span>)</button>',
+        'wallet': '<button onclick="openWalletModal()" class="btn btn-primary" style="display:flex; align-items:center; gap:6px; padding: 10px 20px; font-weight: 600;"><i data-lucide="dollar-sign" width="18"></i> Record Payout</button>',
+        'bank': '<button onclick="openBankModal()" class="btn btn-primary" style="display:flex; align-items:center; gap:6px; padding: 10px 20px; font-weight: 600;"><i data-lucide="plus" width="18"></i> Add Bank Account</button>',
+    };
+
     function switchTab(tabName, el) {
         document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
         document.getElementById('tab-' + tabName).style.display = 'block';
         document.querySelectorAll('.p-tab').forEach(t => t.classList.remove('active'));
-        el.classList.add('active');
+        if(el) el.classList.add('active');
+
+        // Update actions
+        const actionsDiv = document.getElementById('tab-actions');
+        if(actionsDiv) {
+            actionsDiv.innerHTML = tabActions[tabName] || '';
+            if(typeof lucide !== 'undefined') lucide.createIcons();
+        }
     }
+
+    // Initialize first tab actions
+    document.addEventListener('DOMContentLoaded', () => {
+        const activeTab = document.querySelector('.p-tab.active');
+        if(activeTab) {
+            const firstTabName = activeTab.getAttribute('onclick').match(/'([^']+)'/)[1];
+            switchTab(firstTabName, activeTab);
+        }
+    });
     function openWalletModal() { document.getElementById('walletModal').classList.add('active'); }
     function closeWalletModal() { document.getElementById('walletModal').classList.remove('active'); }
     
     function openRateModal() { document.getElementById('rateModal').classList.add('active'); }
     function closeRateModal() { document.getElementById('rateModal').classList.remove('active'); }
+
+    function openBankModal() { document.getElementById('bankModal').classList.add('active'); }
+    function closeBankModal() { document.getElementById('bankModal').classList.remove('active'); }
+
+    function openHistoryModal() { document.getElementById('historyModal').classList.add('active'); }
+    function closeHistoryModal() { document.getElementById('historyModal').classList.remove('active'); }
+
+    function toggleAllTrips(source) {
+        const checkboxes = document.querySelectorAll('#tab-trips .trip-checkbox');
+        checkboxes.forEach(cb => cb.checked = source.checked);
+        updateTripBulkBtn();
+    }
+
+    function updateTripBulkBtn() {
+        const checkboxes = document.querySelectorAll('#tab-trips .trip-checkbox:checked');
+        const bulkBtn = document.getElementById('bulkPrintTripBtn');
+        const countSpan = document.getElementById('selectedTripCount');
+        
+        if (bulkBtn) {
+            if (checkboxes.length > 0) {
+                bulkBtn.style.display = 'inline-flex';
+                countSpan.innerText = checkboxes.length;
+            } else {
+                bulkBtn.style.display = 'none';
+            }
+        }
+    }
+
+    function bulkPrintSelectedTrips() {
+        const checkboxes = document.querySelectorAll('#tab-trips .trip-checkbox:checked');
+        const ids = Array.from(checkboxes).map(cb => cb.value).join(',');
+        if (ids) {
+            window.open('<?= base_url('dispatch/trips/bulk_print') ?>?ids=' + ids, '_blank');
+        }
+    }
+
+    async function showPrintHistory(txId) {
+        openHistoryModal();
+        const content = document.getElementById('historyContent');
+        content.innerHTML = '<div style="text-align:center; padding:2rem; color:var(--text-secondary);">Loading...</div>';
+
+        try {
+            const response = await fetch(`<?= base_url('drivers/get_print_history/') ?>${txId}`);
+            const data = await response.json();
+
+            if (data.success && data.logs.length > 0) {
+                let html = `
+                    <div style="background:var(--bg-body); padding:1rem; border-radius:8px; margin-bottom:1.5rem; text-align:center; border:1px solid var(--border-color);">
+                        <div style="font-size:0.85rem; color:var(--text-secondary);">Total Prints</div>
+                        <div style="font-size:2rem; font-weight:800; color:var(--primary);">${data.count}</div>
+                    </div>
+                `;
+                html += '<div style="display:flex; flex-direction:column; gap:8px;">';
+                data.logs.forEach((log, index) => {
+                    const date = new Date(log.printed_at);
+                    html += `
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:var(--bg-surface); border:1px solid var(--border-color); border-radius:6px; font-size:0.85rem;">
+                            <span style="color:var(--text-secondary); font-weight:600;">#${data.count - index}</span>
+                            <span style="color:var(--text-primary);">${date.toLocaleString()}</span>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                content.innerHTML = html;
+            } else {
+                content.innerHTML = '<div style="text-align:center; padding:3rem; color:var(--text-secondary); opacity:0.6;"><i data-lucide="info" width="32" style="margin-bottom:1rem;"></i><p>No print records found.</p></div>';
+            }
+            if(typeof lucide !== 'undefined') lucide.createIcons();
+        } catch (error) {
+            content.innerHTML = '<div style="color:var(--danger); padding:1rem;">Error loading history.</div>';
+        }
+    }
+
+    function togglePayoutMethods(val) {
+        document.getElementById('payoutMethodSection').style.display = (val === 'withdrawal') ? 'block' : 'none';
+        // Reset bank section if flipping back to deposit
+        if (val !== 'withdrawal') document.getElementById('bankListSection').style.display = 'none';
+    }
+
+    function toggleBankList(val) {
+        document.getElementById('bankListSection').style.display = (val === 'bank') ? 'block' : 'none';
+    }
 
     <?php if(session()->getFlashdata('success')): ?>
         alert('<?= session()->getFlashdata('success') ?>');

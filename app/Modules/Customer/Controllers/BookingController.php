@@ -127,12 +127,28 @@ class BookingController extends BaseController
 
     public function history()
     {
+        $fromDate = $this->request->getVar('from_date');
+        $toDate = $this->request->getVar('to_date');
+
         // Show trips for hardcoded customer 1
-        $trips = $this->tripModel->where('customer_id', 1)->orderBy('created_at', 'DESC')->findAll();
+        $query = $this->tripModel->where('customer_id', 1);
+
+        if ($fromDate) {
+            $query->where('created_at >=', $fromDate . ' 00:00:00');
+        }
+        if ($toDate) {
+            $query->where('created_at <=', $toDate . ' 23:59:59');
+        }
+
+        $trips = $query->orderBy('created_at', 'DESC')->findAll();
         
         return view('Modules\Customer\Views\booking\history', [
             'trips' => $trips,
-            'title' => 'My Trips'
+            'title' => 'My Trips',
+            'filters' => [
+                'from_date' => $fromDate,
+                'to_date' => $toDate
+            ]
         ]);
     }
 }

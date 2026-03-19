@@ -570,13 +570,16 @@
 
         <!-- Right Column -->
         <div>
-            <!-- Customer Card -->
-            <?php if(isset($dispute->customer_id) && $dispute->customer_id > 0): ?>
+            <!-- Involved Parties Card -->
             <div class="detail-card">
                 <div class="card-header" style="margin-bottom:1rem; border-bottom:none;">
-                    <i data-lucide="user" width="20"></i> Customer Profile
+                    <i data-lucide="users" width="20"></i> Involved Parties
                 </div>
-                <div style="padding: 0 0.5rem;">
+
+                <!-- Customer Profile -->
+                <?php if(isset($dispute->customer_id) && $dispute->customer_id > 0): ?>
+                <div style="padding: 0 0.5rem; margin-bottom: 1.5rem;">
+                    <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.75rem; border-bottom: 1px solid var(--border-color); padding-bottom: 4px;">Customer</div>
                     <div style="display:flex; align-items:center; gap:12px; margin-bottom:1rem;">
                         <div style="width:48px; height:48px; border-radius:50%; background:rgba(59, 130, 246, 0.1); color:var(--info); display:flex; align-items:center; justify-content:center; font-weight:600; font-size:1.2rem;">
                             <?= substr($dispute->c_first_name, 0, 1) . substr($dispute->c_last_name, 0, 1) ?>
@@ -586,7 +589,7 @@
                             <div style="color:var(--text-secondary); font-size:0.85rem; display:flex; align-items:center; gap:4px;"><i data-lucide="phone" width="12"></i> <?= esc($dispute->c_phone) ?></div>
                         </div>
                     </div>
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; margin-bottom:1.5rem;">
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem;">
                         <div style="background:var(--bg-body); padding:0.75rem; border-radius:var(--radius-sm); border:1px solid var(--border-color); text-align:center;">
                             <div style="font-size:0.75rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px;">Wallet</div>
                             <div style="font-weight:700; color:var(--text-primary);">$<?= number_format($dispute->c_wallet_balance ?? 0, 2) ?></div>
@@ -597,16 +600,16 @@
                         </div>
                     </div>
                 </div>
-            </div>
-            <?php endif; ?>
+                <?php endif; ?>
 
-            <!-- Driver Card -->
-            <?php if(isset($dispute->driver_id) && $dispute->driver_id > 0): ?>
-            <div class="detail-card">
-                <div class="card-header" style="margin-bottom:1rem; border-bottom:none;">
-                    <i data-lucide="car-front" width="20"></i> Driver Profile
-                </div>
+                <?php if(isset($dispute->customer_id) && $dispute->customer_id > 0 && isset($dispute->driver_id) && $dispute->driver_id > 0): ?>
+                    <hr style="border: 0; border-top: 1px dashed var(--border-color); margin: 1.5rem 0;">
+                <?php endif; ?>
+
+                <!-- Driver Profile -->
+                <?php if(isset($dispute->driver_id) && $dispute->driver_id > 0): ?>
                 <div style="padding: 0 0.5rem;">
+                    <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.75rem; border-bottom: 1px solid var(--border-color); padding-bottom: 4px;">Driver</div>
                     <div style="display:flex; align-items:center; gap:12px; margin-bottom:1rem;">
                         <div style="width:48px; height:48px; border-radius:50%; background:rgba(139, 92, 246, 0.1); color:#8b5cf6; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:1.2rem;">
                             <?= substr($dispute->d_first_name, 0, 1) . substr($dispute->d_last_name, 0, 1) ?>
@@ -616,7 +619,7 @@
                             <div style="color:var(--text-secondary); font-size:0.85rem; display:flex; align-items:center; gap:4px;"><i data-lucide="phone" width="12"></i> <?= esc($dispute->d_phone) ?></div>
                         </div>
                     </div>
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; margin-bottom:1.5rem;">
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem;">
                         <div style="background:var(--bg-body); padding:0.75rem; border-radius:var(--radius-sm); border:1px solid var(--border-color); text-align:center;">
                             <div style="font-size:0.75rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px;">Wallet</div>
                             <div style="font-weight:700; color:var(--text-primary);">$<?= number_format($dispute->d_wallet_balance ?? 0, 2) ?></div>
@@ -627,8 +630,8 @@
                         </div>
                     </div>
                 </div>
+                <?php endif; ?>
             </div>
-            <?php endif; ?>
 
             <!-- Related Trip Card -->
             <?php if(isset($dispute->trip_id) && $dispute->trip_id != null): ?>

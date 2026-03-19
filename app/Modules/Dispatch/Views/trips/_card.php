@@ -1,5 +1,10 @@
 <div class="trip-wrapper" id="trip-wrapper-<?= $trip->id ?>">
     <div class="trip-card" onclick="openTripDetailsModal(<?= htmlspecialchars(json_encode($trip)) ?>)">
+        <!-- 0. Selection -->
+        <div style="text-align:center;" onclick="event.stopPropagation()">
+            <input type="checkbox" class="trip-checkbox" value="<?= $trip->id ?>" onclick="updateTripBulkBtn()">
+        </div>
+
         <!-- 1. Status Column -->
         <div style="text-align:center;">
             <span class="status-badge status-<?= $trip->status ?>" style="display:block; margin-bottom:4px; font-size:0.7rem;">
