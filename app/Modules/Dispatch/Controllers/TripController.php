@@ -261,8 +261,10 @@ class TripController extends BaseController
         // 1. Fetch All Trips with Joins
         $builder = $this->tripModel->builder();
         $builder->select('trips.*, customers.first_name as c_first, customers.last_name as c_last, customers.wallet_balance as c_wallet_balance, drivers.first_name as d_first, drivers.last_name as d_last, drivers.vehicle_model, drivers.rating as d_rating, drivers.wallet_balance as d_wallet_balance, customers.rating as c_rating, 
-            (SELECT COUNT(*) FROM ratings WHERE ratings.trip_id = trips.id AND ratings.rater_type = "customer") as driver_is_rated,
-            (SELECT COUNT(*) FROM ratings WHERE ratings.trip_id = trips.id AND ratings.rater_type = "driver") as customer_is_rated');
+            (SELECT COUNT(*) FROM ratings WHERE ratings.trip_id = trips.id AND ratings.rater_type = "customer") as driver_is_rated_by_customer,
+            (SELECT COUNT(*) FROM ratings WHERE ratings.trip_id = trips.id AND ratings.rater_type = "driver") as customer_is_rated_by_driver,
+            (SELECT COUNT(*) FROM ratings WHERE ratings.trip_id = trips.id AND ratings.rater_type = "system" AND ratings.ratee_type = "driver") as system_rated_driver,
+            (SELECT COUNT(*) FROM ratings WHERE ratings.trip_id = trips.id AND ratings.rater_type = "system" AND ratings.ratee_type = "customer") as system_rated_customer');
         $builder->join('customers', 'customers.id = trips.customer_id', 'left');
         $builder->join('drivers', 'drivers.id = trips.driver_id', 'left');
         $builder->where('trips.deleted_at', null);

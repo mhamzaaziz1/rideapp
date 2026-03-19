@@ -81,6 +81,24 @@
     .update-form .form-control:focus, .update-form .form-select:focus { border-color: var(--primary); outline: none; }
     
     .resolution-box { background: rgba(16, 185, 129, 0.05); padding: 1.5rem; border: 1px solid rgba(16, 185, 129, 0.2); border-radius: var(--radius-md); }
+
+    /* Settlement Method Styles */
+    .res-method-card {
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-sm);
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        transition: all 0.2s;
+    }
+    .res-method-card:hover { border-color: var(--info); background: rgba(59, 130, 246, 0.05); }
+    .res-method-card input[type="radio"] { margin: 0; transform: scale(1.1); accent-color: var(--info); }
+    .res-method-card:has(input[type="radio"]:checked) { border-color: var(--info); background: rgba(59, 130, 246, 0.05); }
+    .res-method-title { font-weight: 600; font-size: 0.9rem; color: var(--text-primary); margin-bottom: 2px; }
+    .res-method-desc { font-size: 0.75rem; color: var(--text-secondary); line-height: 1.3; }
 </style>
 
 <div class="detail-container">
@@ -105,6 +123,14 @@
             </div>
         </div>
         <div style="display:flex; gap:1rem;">
+            <?php if (!in_array($dispute->status, ['resolved', 'closed'])): ?>
+                <button type="button" onclick="openSettleModal()" class="btn btn-outline" style="border-color: var(--info); color: var(--info); padding: 0.6rem;" title="Settle Fare">
+                    <i data-lucide="dollar-sign" width="18"></i>
+                </button>
+            <?php endif; ?>
+            <button type="button" onclick="openStatusModal()" class="btn btn-outline" style="border-color: var(--warning); color: var(--warning); padding: 0.6rem;" title="Change Status">
+                <i data-lucide="refresh-cw" width="18"></i>
+            </button>
             <a href="<?= base_url('admin/disputes/edit/'.$dispute->id) ?>" class="btn btn-outline" style="border-color: var(--primary); color: var(--primary); padding: 0.6rem;" title="Edit Dispute">
                 <i data-lucide="edit-2" width="18"></i>
             </a>
@@ -336,6 +362,125 @@
                 <?php endif; ?>
 
 
+                <!-- Settle Fare Modal -->
+                <?php if (!in_array($dispute->status, ['resolved', 'closed'])): ?>
+                <div id="settleFareModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.55); z-index:2000; align-items:center; justify-content:center; padding:1rem;">
+                    <div style="background:var(--bg-surface); border-radius:var(--radius-md); width:500px; max-width:100%; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,0.3); border:1px solid var(--border-color); position:relative;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding:1.5rem 2rem; border-bottom:1px solid var(--border-color);">
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <div style="width:38px; height:38px; background:rgba(59, 130, 246, 0.1); border-radius:8px; display:flex; align-items:center; justify-content:center;">
+                                    <i data-lucide="dollar-sign" width="20" style="color:var(--info);"></i>
+                                </div>
+                                <div>
+                                    <div style="font-weight:700; font-size:1.05rem;">Settle Fare</div>
+                                    <div style="font-size:0.8rem; color:var(--text-secondary);">Dispute #DSP-<?= esc($dispute->id) ?></div>
+                                </div>
+                            </div>
+                            <button onclick="closeSettleModal()" type="button" style="background:none; border:none; cursor:pointer; color:var(--text-secondary); padding:4px;"><i data-lucide="x" width="20"></i></button>
+                        </div>
+                        <div style="padding:1.5rem 2rem;">
+                            <form action="<?= base_url('admin/disputes/settle/'.$dispute->id) ?>" method="POST" class="update-form">
+                                <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:1.5rem; line-height:1.4;">Issue a refund or payout to resolve this case. This will permanently mark the case as resolved.</p>
+                                
+                                <div style="margin-bottom: 1.5rem;">
+                                    <label style="margin-bottom: 0.75rem; display:block;">Resolution Method</label>
+                                    <label class="res-method-card">
+                                        <input type="radio" name="settle_to" value="customer" required>
+                                        <div class="res-method-info">
+                                            <div class="res-method-title">Refund Customer</div>
+                                            <div class="res-method-desc">Issue system funds directly to the Customer's wallet.</div>
+                                        </div>
+                                    </label>
+
+                                    <label class="res-method-card">
+                                        <input type="radio" name="settle_to" value="driver" required>
+                                        <div class="res-method-info">
+                                            <div class="res-method-title">Payout Driver</div>
+                                            <div class="res-method-desc">Issue system funds directly to the Driver's wallet.</div>
+                                        </div>
+                                    </label>
+
+                                    <label class="res-method-card">
+                                        <input type="radio" name="settle_to" value="transfer_to_customer" required>
+                                        <div class="res-method-info">
+                                            <div class="res-method-title">Settle: Deduct Driver &rightarrow; Refund Customer</div>
+                                            <div class="res-method-desc">Take from Driver's wallet and deposit to Customer's wallet.</div>
+                                        </div>
+                                    </label>
+
+                                    <label class="res-method-card">
+                                        <input type="radio" name="settle_to" value="transfer_to_driver" required>
+                                        <div class="res-method-info">
+                                            <div class="res-method-title">Settle: Deduct Customer &rightarrow; Payout Driver</div>
+                                            <div class="res-method-desc">Take from Customer's wallet and deposit to Driver's wallet.</div>
+                                        </div>
+                                    </label>
+                                </div>
+
+                                <div style="display:grid; grid-template-columns: 1fr 2fr; gap:1rem; margin-bottom: 1rem;">
+                                    <div>
+                                        <label>Amount ($)</label>
+                                        <input type="number" step="0.01" min="0.01" name="amount" class="form-control" required placeholder="0.00">
+                                    </div>
+                                    <div>
+                                        <label>Settlement Notes</label>
+                                        <input type="text" name="notes" class="form-control" required placeholder="Reason for payout...">
+                                    </div>
+                                </div>
+
+                                <div style="display:flex; gap:1rem; justify-content:flex-end; margin-top:1.5rem; padding-top:1.5rem; border-top:1px solid var(--border-color);">
+                                    <button type="button" onclick="closeSettleModal()" class="btn btn-outline">Cancel</button>
+                                    <button type="submit" class="btn btn-primary" style="background:var(--info); border:none; color:white; font-weight:600; padding:0.65rem 1.25rem; border-radius:var(--radius-sm); cursor:pointer;" onclick="return confirm('Are you sure? This will issue funds immediately and resolve the dispute.')">
+                                        Issue Settlement
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <?php endif; ?>
+
+
+                <!-- Change Status Modal -->
+                <div id="statusModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.55); z-index:2000; align-items:center; justify-content:center; padding:1rem;">
+                    <div style="background:var(--bg-surface); border-radius:var(--radius-md); width:480px; max-width:100%; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,0.3); border:1px solid var(--border-color); position:relative;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding:1.5rem 2rem; border-bottom:1px solid var(--border-color);">
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <div style="width:38px; height:38px; background:rgba(245, 158, 11, 0.1); border-radius:8px; display:flex; align-items:center; justify-content:center;">
+                                    <i data-lucide="refresh-cw" width="20" style="color:var(--warning);"></i>
+                                </div>
+                                <div>
+                                    <div style="font-weight:700; font-size:1.05rem;">Change Case Status</div>
+                                    <div style="font-size:0.8rem; color:var(--text-secondary);">Dispute #DSP-<?= esc($dispute->id) ?></div>
+                                </div>
+                            </div>
+                            <button onclick="closeStatusModal()" type="button" style="background:none; border:none; cursor:pointer; color:var(--text-secondary); padding:4px;"><i data-lucide="x" width="20"></i></button>
+                        </div>
+                        <div style="padding:1.5rem 2rem;">
+                            <form action="<?= base_url('admin/disputes/update/'.$dispute->id) ?>" method="POST" class="update-form">
+                                <label>Current Status</label>
+                                <select name="status" class="form-select">
+                                    <option value="open" <?= ($dispute->status == 'open') ? 'selected' : '' ?>>Open / Unassigned</option>
+                                    <option value="investigating" <?= ($dispute->status == 'investigating') ? 'selected' : '' ?>>Investigating</option>
+                                    <option value="resolved" <?= ($dispute->status == 'resolved') ? 'selected' : '' ?>>Resolved</option>
+                                    <option value="closed" <?= ($dispute->status == 'closed') ? 'selected' : '' ?>>Closed (No Action)</option>
+                                </select>
+                                
+                                <label>Resolution Remarks <span style="font-weight:normal; opacity:0.6;">(Optional unless resolving)</span></label>
+                                <textarea name="resolution" class="form-control" rows="4" placeholder="Detail the outcome or notes taken during investigation..."><?= esc($dispute->resolution) ?></textarea>
+                                
+                                <div style="display:flex; gap:1rem; justify-content:flex-end; margin-top:1.5rem; padding-top:1.5rem; border-top:1px solid var(--border-color);">
+                                    <button type="button" onclick="closeStatusModal()" class="btn btn-outline">Cancel</button>
+                                    <button type="submit" class="btn btn-primary" style="background:var(--warning); border:none; color:white; font-weight:600; padding:0.65rem 1.25rem; border-radius:var(--radius-sm); cursor:pointer;">
+                                        Update Status
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+
                 <?php if (!empty($dispute->attachment)): ?>
                     <div class="info-row" style="border-bottom:none; padding-bottom:0.5rem; padding-top:1rem; border-top:1px dashed var(--border-color);">
                         <div class="info-label">Attached Evidence</div>
@@ -500,105 +645,7 @@
             </div>
             <?php endif; ?>
 
-            <!-- Action Form -->
-            <div class="detail-card">
-                <div class="card-header">
-                    <i data-lucide="edit-3" width="20"></i> Update Status
-                </div>
-                <form action="<?= base_url('admin/disputes/update/'.$dispute->id) ?>" method="POST" class="update-form" style="padding: 0.5rem;">
-                    
-                    <label>Current Status</label>
-                    <select name="status" class="form-select">
-                        <option value="open" <?= ($dispute->status == 'open') ? 'selected' : '' ?>>Open / Unassigned</option>
-                        <option value="investigating" <?= ($dispute->status == 'investigating') ? 'selected' : '' ?>>Investigating</option>
-                        <option value="resolved" <?= ($dispute->status == 'resolved') ? 'selected' : '' ?>>Resolved</option>
-                        <option value="closed" <?= ($dispute->status == 'closed') ? 'selected' : '' ?>>Closed (No Action)</option>
-                    </select>
-                    
-                    <label>Resolution Remarks <span style="font-weight:normal; opacity:0.6;">(Optional unless resolving)</span></label>
-                    <textarea name="resolution" class="form-control" rows="3" placeholder="Detail the outcome or notes taken during investigation..."><?= esc($dispute->resolution) ?></textarea>
-                    
-                    <button type="submit" class="btn btn-primary" style="width:100%; padding:0.75rem; font-weight:600; font-size:1rem; margin-top:0.5rem;">
-                        <i data-lucide="save" width="16" style="margin-right:8px;"></i> Save Changes
-                    </button>
-                </form>
-            </div>
 
-            <!-- Settle Fare Form -->
-            <?php if (!in_array($dispute->status, ['resolved', 'closed'])): ?>
-            <div class="detail-card" style="border-top: 4px solid var(--info);">
-                <div class="card-header" style="color:var(--info);">
-                    <i data-lucide="dollar-sign" width="20"></i> Settle Fare
-                </div>
-                <form action="<?= base_url('admin/disputes/settle/'.$dispute->id) ?>" method="POST" class="update-form" style="padding: 0.5rem;">
-                    <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:1rem; line-height:1.4;">Issue a refund or payout to resolve this case. This will permanently mark the case as resolved.</p>
-                    
-                    <label style="margin-bottom: 0.5rem; display:block;">Resolution Method</label>
-                    <style>
-                        .res-method-card {
-                            border: 1px solid var(--border-color);
-                            border-radius: var(--radius-sm);
-                            padding: 0.75rem;
-                            margin-bottom: 0.5rem;
-                            cursor: pointer;
-                            display: flex;
-                            align-items: center;
-                            gap: 0.75rem;
-                            transition: all 0.2s;
-                        }
-                        .res-method-card:hover { border-color: var(--info); background: rgba(59, 130, 246, 0.05); }
-                        .res-method-card input[type="radio"] { margin: 0; transform: scale(1.1); accent-color: var(--info); }
-                        .res-method-card:has(input[type="radio"]:checked) { border-color: var(--info); background: rgba(59, 130, 246, 0.05); }
-                        .res-method-title { font-weight: 600; font-size: 0.9rem; color: var(--text-primary); margin-bottom: 2px; }
-                        .res-method-desc { font-size: 0.75rem; color: var(--text-secondary); line-height: 1.3; }
-                    </style>
-
-                    <div style="margin-bottom: 1rem;">
-                        <label class="res-method-card">
-                            <input type="radio" name="settle_to" value="customer" required>
-                            <div class="res-method-info">
-                                <div class="res-method-title">Refund Customer</div>
-                                <div class="res-method-desc">Issue system funds directly to the Customer's wallet.</div>
-                            </div>
-                        </label>
-
-                        <label class="res-method-card">
-                            <input type="radio" name="settle_to" value="driver" required>
-                            <div class="res-method-info">
-                                <div class="res-method-title">Payout Driver</div>
-                                <div class="res-method-desc">Issue system funds directly to the Driver's wallet.</div>
-                            </div>
-                        </label>
-
-                        <label class="res-method-card">
-                            <input type="radio" name="settle_to" value="transfer_to_customer" required>
-                            <div class="res-method-info">
-                                <div class="res-method-title">Settle: Deduct Driver &rightarrow; Refund Customer</div>
-                                <div class="res-method-desc">Take from Driver's wallet and deposit to Customer's wallet.</div>
-                            </div>
-                        </label>
-
-                        <label class="res-method-card">
-                            <input type="radio" name="settle_to" value="transfer_to_driver" required>
-                            <div class="res-method-info">
-                                <div class="res-method-title">Settle: Deduct Customer &rightarrow; Payout Driver</div>
-                                <div class="res-method-desc">Take from Customer's wallet and deposit to Driver's wallet.</div>
-                            </div>
-                        </label>
-                    </div>
-
-                    <label>Amount ($)</label>
-                    <input type="number" step="0.01" min="0.01" name="amount" class="form-control" required placeholder="0.00">
-
-                    <label>Settlement Notes</label>
-                    <input type="text" name="notes" class="form-control" required placeholder="Reason for payout...">
-
-                    <button type="submit" class="btn btn-outline" style="width:100%; border-color:var(--info); color:var(--info); font-weight:600; background:rgba(59, 130, 246, 0.05); padding:0.75rem; font-size:1rem; display:flex; align-items:center; justify-content:center; gap:8px;" onclick="return confirm('Are you sure? This will issue funds immediately and resolve the dispute.')">
-                        <i data-lucide="check-circle" width="16"></i> Issue Settlement
-                    </button>
-                </form>
-            </div>
-            <?php endif; ?>
         </div>
 
     </div>
@@ -619,9 +666,33 @@
         if (modal) { modal.style.display = 'none'; }
     }
 
+    function openSettleModal() {
+        const modal = document.getElementById('settleFareModal');
+        if (modal) { modal.style.display = 'flex'; lucide.createIcons(); }
+    }
+
+    function closeSettleModal() {
+        const modal = document.getElementById('settleFareModal');
+        if (modal) { modal.style.display = 'none'; }
+    }
+
+    function openStatusModal() {
+        const modal = document.getElementById('statusModal');
+        if (modal) { modal.style.display = 'flex'; lucide.createIcons(); }
+    }
+
+    function closeStatusModal() {
+        const modal = document.getElementById('statusModal');
+        if (modal) { modal.style.display = 'none'; }
+    }
+
     window.addEventListener('click', function(e) {
-        const modal = document.getElementById('returnTripModal');
-        if (modal && e.target === modal) { modal.style.display = 'none'; }
+        const rtModal = document.getElementById('returnTripModal');
+        const stModal = document.getElementById('settleFareModal');
+        const sModal  = document.getElementById('statusModal');
+        if (rtModal && e.target === rtModal) { rtModal.style.display = 'none'; }
+        if (stModal && e.target === stModal) { stModal.style.display = 'none'; }
+        if (sModal  && e.target === sModal)  { sModal.style.display  = 'none'; }
     });
 
     // ── Address Autocomplete (Nominatim) ─────────────────────────────────────

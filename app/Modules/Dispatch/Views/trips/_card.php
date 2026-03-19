@@ -104,30 +104,48 @@
                         Actions <i data-lucide="chevron-down" width="12"></i>
                     </button>
                     <div class="dropdown-menu" style="right:0; top:100%; min-width:140px;">
-                        <?php if($trip->status == 'completed'): ?>
-                            <?php if($trip->driver_id): ?>
-                                <?php if ($trip->driver_is_rated == 0): ?>
-                                    <button onclick="openRateModal(<?= $trip->id ?>, 'driver', <?= $trip->driver_id ?>, <?= $trip->customer_id ?? 'null' ?>)" class="dropdown-item">
-                                        <i data-lucide="star" width="14" style="color:var(--warning)"></i> Rate Driver
-                                    </button>
-                                <?php endif; ?>
-                            <?php endif; ?>
-                            <?php if($trip->customer_id): ?>
-                                <?php if ($trip->customer_is_rated == 0): ?>
-                                    <button onclick="openRateModal(<?= $trip->id ?>, 'customer', <?= $trip->customer_id ?>, <?= $trip->driver_id ?? 'null' ?>)" class="dropdown-item">
-                                        <i data-lucide="star" width="14" style="color:var(--info)"></i> Rate Customer
-                                    </button>
-                                <?php endif; ?>
-                            <?php endif; ?>
-                            <div style="border-top:1px solid var(--border-color); margin:4px 0;"></div>
+                        <!-- Status Actions -->
+                        <?php if(in_array($trip->status, ['active', 'dispatching'])): ?>
+                            <button onclick="event.stopPropagation(); window.updateTripStatus(<?= $trip->id ?>, 'completed')" class="dropdown-item text-success">
+                                <i data-lucide="check-circle" width="14" style="color:var(--success)"></i> Mark Complete
+                            </button>
                         <?php endif; ?>
-                        
-                        <a href="<?= base_url('dispatch/trips/view/'.$trip->id) ?>" class="dropdown-item">
-                            <i data-lucide="eye" width="14"></i> View Details
-                        </a>
-                        <a href="<?= base_url('dispatch/trips/edit/'.$trip->id) ?>" class="dropdown-item">
-                            <i data-lucide="edit-2" width="14"></i> Edit Trip
-                        </a>
+                        <?php if(!in_array($trip->status, ['completed', 'cancelled'])): ?>
+                            <button onclick="event.stopPropagation(); window.updateTripStatus(<?= $trip->id ?>, 'cancelled')" class="dropdown-item text-danger">
+                                <i data-lucide="x-circle" width="14" style="color:var(--danger)"></i> Cancel Trip
+                            </button>
+                        <?php endif; ?>
+
+                        <?php if($trip->status != 'cancelled'): ?>
+                            <div style="border-top:1px solid var(--border-color); margin:4px 0;"></div>
+                            
+                            <!-- Rating Options (Hidden if Cancelled or Already Rated) -->
+                            <?php if($trip->driver_id && empty($trip->system_rated_driver)): ?>
+                                <button onclick="event.stopPropagation(); window.openRateModal(<?= htmlspecialchars(json_encode($trip)) ?>, 'driver')" class="dropdown-item">
+                                    <i data-lucide="star" width="14" style="color:var(--warning)"></i> Rate Driver
+                                </button>
+                            <?php endif; ?>
+                            <?php if($trip->customer_id && empty($trip->system_rated_customer)): ?>
+                                <button onclick="event.stopPropagation(); window.openRateModal(<?= htmlspecialchars(json_encode($trip)) ?>, 'customer')" class="dropdown-item">
+                                    <i data-lucide="star" width="14" style="color:var(--info)"></i> Rate Customer
+                                </button>
+                            <?php endif; ?>
+                            
+                            <div style="border-top:1px solid var(--border-color); margin:4px 0;"></div>
+                            
+                            <a href="<?= base_url('dispatch/trips/view/'.$trip->id) ?>" class="dropdown-item">
+                                <i data-lucide="eye" width="14"></i> View Details
+                            </a>
+                            <a href="<?= base_url('dispatch/trips/edit/'.$trip->id) ?>" class="dropdown-item">
+                                <i data-lucide="edit-2" width="14"></i> Edit Trip
+                            </a>
+                        <?php else: ?>
+                            <div style="border-top:1px solid var(--border-color); margin:4px 0;"></div>
+                            <a href="<?= base_url('dispatch/trips/view/'.$trip->id) ?>" class="dropdown-item">
+                                <i data-lucide="eye" width="14"></i> View Details
+                            </a>
+                        <?php endif; ?>
+
                         <a href="<?= base_url('dispatch/trips/print/'.$trip->id) ?>" target="_blank" class="dropdown-item">
                             <i data-lucide="printer" width="14"></i> Print Receipt
                         </a>

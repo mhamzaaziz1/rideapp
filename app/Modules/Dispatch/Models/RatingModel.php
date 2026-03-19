@@ -22,8 +22,8 @@ class RatingModel extends Model
 
     protected $validationRules = [
         'trip_id'    => 'required|integer',
-        'rater_type' => 'required|in_list[driver,customer]',
-        'rater_id'   => 'required|integer',
+        'rater_type' => 'required|in_list[driver,customer,system]',
+        'rater_id'   => 'permit_empty|integer',
         'ratee_type' => 'required|in_list[driver,customer]',
         'ratee_id'   => 'required|integer',
         'rating'     => 'required|integer|greater_than_equal_to[1]|less_than_equal_to[5]',

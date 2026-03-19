@@ -29,11 +29,21 @@ class RatingController extends BaseController
      */
     public function submit()
     {
-        // Simple validation
+        // Try to get JSON data first (for AJAX requests)
+        try {
+            $json = $this->request->getJSON(true);
+        } catch (\Exception $e) {
+            $json = null;
+        }
+
+        $data = $json ?? $this->request->getPost();
+
+        // Validation rules
         $rules = [
             'trip_id'    => 'required|integer',
-            'rater_type' => 'required|in_list[driver,customer]',
-            'rater_id'   => 'required|integer', // In production, get from session
+            'rater_type' => 'required|in_list[driver,customer,system]',
+            'ratee_type' => 'permit_empty|in_list[driver,customer]',
+            'ratee_id'   => 'permit_empty|integer',
             'rating'     => 'required|integer|greater_than_equal_to[1]|less_than_equal_to[5]',
             'comment'    => 'permit_empty|string|max_length[1000]'
         ];
@@ -45,43 +55,57 @@ class RatingController extends BaseController
             ])->setStatusCode(400); 
         }
 
-        $tripId = $this->request->getPost('trip_id');
-        $raterType = $this->request->getPost('rater_type');
-        $raterId = $this->request->getPost('rater_id');
-        $ratingScore = $this->request->getPost('rating');
-        $comment = $this->request->getPost('comment');
+        $tripId = $data['trip_id'];
+        $rateeType = $data['ratee_type'] ?? null;
+        $rateeId = $data['ratee_id'] ?? null;
+        $raterType = $data['rater_type'] ?? 'system';
+        $raterId = $data['rater_id'] ?? 0;
+        $ratingScore = $data['rating'];
+        $comment = $data['comment'] ?? '';
+
+        if ($raterId == 0) { $raterType = 'system'; }
 
         $trip = $this->tripModel->find($tripId);
-
         if (!$trip) {
             return $this->response->setJSON(['status' => 'error', 'message' => 'Trip not found'])->setStatusCode(404);
         }
 
-        // Determine ratee and validate participation
-        $rateeType = ($raterType === 'driver') ? 'customer' : 'driver';
-        $rateeId = 0;
-
-        if ($raterType === 'driver') {
-            if ($trip->driver_id != $raterId) {
-                return $this->response->setJSON(['status' => 'error', 'message' => 'Driver did not perform this trip'])->setStatusCode(403);
+        // Logic for Dispatch Board (System) Ratings
+        if ($raterId == 0) {
+            // If dispatch board didn't specify ratee_type/id, derive it (fallback)
+            if (empty($rateeType)) {
+                $rateeType = ($raterType === 'driver') ? 'customer' : 'driver';
             }
-            $rateeId = $trip->customer_id;
+            if (empty($rateeId)) {
+                $rateeId = ($rateeType === 'driver') ? $trip->driver_id : $trip->customer_id;
+            }
         } else {
-            if ($trip->customer_id != $raterId) {
-                return $this->response->setJSON(['status' => 'error', 'message' => 'Customer did not request this trip'])->setStatusCode(403);
+            // Original logic for Driver/Customer self-service ratings
+            $rateeType = ($raterType === 'driver') ? 'customer' : 'driver';
+            if ($raterType === 'driver') {
+                if ($trip->driver_id != $raterId) {
+                    return $this->response->setJSON(['status' => 'error', 'message' => 'Driver did not perform this trip'])->setStatusCode(403);
+                }
+                $rateeId = $trip->customer_id;
+            } else {
+                if ($trip->customer_id != $raterId) {
+                    return $this->response->setJSON(['status' => 'error', 'message' => 'Customer did not request this trip'])->setStatusCode(403);
+                }
+                $rateeId = $trip->driver_id;
             }
-            $rateeId = $trip->driver_id;
         }
 
-        // Check for existing rating
+        // Check for existing rating (specifically for this trip + rater + ratee combo)
         $existing = $this->ratingModel->where([
             'trip_id'    => $tripId,
             'rater_type' => $raterType,
-            'rater_id'   => $raterId
+            'rater_id'   => $raterId,
+            'ratee_type' => $rateeType,
+            'ratee_id'   => $rateeId
         ])->first();
 
         if ($existing) {
-            return $this->response->setJSON(['status' => 'error', 'message' => 'You have already rated this trip'])->setStatusCode(409);
+            return $this->response->setJSON(['status' => 'error', 'message' => 'This participant has already been rated for this trip.'])->setStatusCode(409);
         }
 
         // Save Rating

@@ -125,12 +125,40 @@
                 Created: <?= $trip->created_at->format('M d, Y H:i') ?>
             </div>
         </div>
-        <div style="display:flex; gap:1rem;">
-            <a href="<?= base_url('dispatch/trips/edit/' . $trip->id) ?>" class="btn btn-secondary">
-                <i data-lucide="edit-2" width="16"></i> Edit Trip
-            </a>
-            <a href="<?= base_url('dispatch/trips') ?>" class="btn btn-outline">
-                <i data-lucide="arrow-left" width="16"></i> Back to List
+        <div style="display:flex; gap:0.75rem; align-items:center;">
+            <!-- Actions Dropdown -->
+            <div class="dropdown">
+                <button class="btn btn-primary" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="display:flex; align-items:center; gap:8px;">
+                    Actions <i data-lucide="chevron-down" width="16"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow border-0" style="font-size: 0.9rem; border-radius: 12px; min-width: 180px; padding: 0.5rem;">
+                    <?php if(in_array($trip->status, ['active', 'dispatching'])): ?>
+                        <li><a class="dropdown-item py-2 text-success" href="javascript:void(0)" onclick="updateTripStatus(<?= $trip->id ?>, 'completed')">
+                            <i data-lucide="check-circle" width="16" class="me-2"></i> Mark as Complete
+                        </a></li>
+                    <?php endif; ?>
+                    
+                    <?php if(!in_array($trip->status, ['completed', 'cancelled'])): ?>
+                        <li><a class="dropdown-item py-2 text-danger" href="javascript:void(0)" onclick="updateTripStatus(<?= $trip->id ?>, 'cancelled')">
+                            <i data-lucide="x-circle" width="16" class="me-2"></i> Cancel Trip
+                        </a></li>
+                    <?php endif; ?>
+
+                    <?php if(!in_array($trip->status, ['completed', 'cancelled']) && (in_array($trip->status, ['active', 'dispatching']))): ?>
+                        <li><hr class="dropdown-divider"></li>
+                    <?php endif; ?>
+
+                    <li><a class="dropdown-item py-2" href="<?= base_url('dispatch/trips/edit/' . $trip->id) ?>">
+                        <i data-lucide="edit" width="16" class="me-2"></i> Edit Details
+                    </a></li>
+                    <li><a class="dropdown-item py-2" href="<?= base_url('dispatch/trips/print/' . $trip->id) ?>" target="_blank">
+                        <i data-lucide="printer" width="16" class="me-2"></i> Print Receipt
+                    </a></li>
+                </ul>
+            </div>
+
+            <a href="<?= base_url('dispatch/trips') ?>" class="btn btn-outline" style="display:flex; align-items:center; gap:8px;">
+                <i data-lucide="arrow-left" width="16"></i> Back
             </a>
         </div>
     </div>
@@ -426,6 +454,29 @@
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         lucide.createIcons();
+
+        window.updateTripStatus = (id, newStatus) => {
+            if(!confirm(`Are you sure you want to mark this trip as ${newStatus}?`)) return;
+
+            const formData = new FormData();
+            formData.append('id', id);
+            formData.append('status', newStatus);
+
+            fetch("<?= base_url('dispatch/trips/update_status') ?>", {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    location.reload();
+                } else {
+                    alert(data.message || 'Failed to update status');
+                }
+            })
+            .catch(console.error);
+        };
 
         // Initialize Map
         const pickupLat = <?= $trip->pickup_lat ?>;
