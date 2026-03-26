@@ -293,7 +293,7 @@
                 </div>
                 <div style="margin-left:1.5rem; display:flex; align-items:center; gap:15px;">
                     <span class="status-badge status-<?= $t->status ?>"><?= $t->status ?></span>
-                    <a href="<?= base_url('dispatch/trips/print/' . $t->id) ?>" target="_blank" title="Print Receipt" style="color:var(--text-secondary);">
+                    <a href="<?= base_url('dispatch/trips/statement?ids=' . $t->id) ?>" target="_blank" title="Print Trip Statement" style="color:var(--text-secondary);">
                         <i data-lucide="printer" width="18"></i>
                     </a>
                 </div>
@@ -616,7 +616,7 @@
 
 <script>
     const tabActions = {
-        'trips': '<button id="bulkPrintBtn" onclick="bulkPrintSelected()" class="btn btn-outline" style="display:none; align-items:center; gap:6px; padding: 10px 20px; font-weight: 600;"><i data-lucide="printer" width="18"></i> Bulk Print (<span id="selectedTripCount">0</span>)</button>',
+        'trips': '<button id="bulkPrintBtn" onclick="printTripStatement()" class="btn btn-primary" style="display:none; align-items:center; gap:6px; padding: 10px 20px; font-weight: 600;"><i data-lucide="printer" width="18"></i> Print Trip Statement (<span id="selectedTripCount">0</span>)</button>',
         'wallet': '<button onclick="openWalletModal()" class="btn btn-primary" style="display:flex; align-items:center; gap:6px; padding: 10px 20px; font-weight: 600;"><i data-lucide="plus" width="18"></i> Add Funds</button>',
         'cards': '<button onclick="openCardModal()" class="btn btn-primary" style="display:flex; align-items:center; gap:6px; padding: 10px 20px; font-weight: 600;"><i data-lucide="plus" width="18"></i> Add Card</button>',
         'addresses': '<button onclick="openAddressModal()" class="btn btn-primary" style="display:flex; align-items:center; gap:6px; padding: 10px 20px; font-weight: 600;"><i data-lucide="plus" width="18"></i> Add Address</button>',
@@ -668,11 +668,11 @@
         }
     }
 
-    function bulkPrintSelected() {
+    function printTripStatement() {
         const checkboxes = document.querySelectorAll('#tab-trips .trip-checkbox:checked');
         const ids = Array.from(checkboxes).map(cb => cb.value).join(',');
         if (ids) {
-            window.open('<?= base_url('dispatch/trips/bulk_print') ?>?ids=' + ids, '_blank');
+            window.open('<?= base_url('dispatch/trips/statement') ?>?ids=' + ids, '_blank');
         }
     }
 

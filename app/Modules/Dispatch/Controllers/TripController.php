@@ -474,4 +474,52 @@ class TripController extends BaseController
 
         return view('Modules\Dispatch\Views\trips\bulk_print', ['trips' => $trips]);
     }
+
+    /**
+     * Print a formal trip statement (summary of selected trips).
+     */
+    public function tripStatement()
+    {
+        $ids = $this->request->getVar('ids');
+        if (empty($ids)) {
+            return redirect()->back()->with('error', 'No trips selected for the statement.');
+        }
+
+        if (is_string($ids)) {
+            $ids = explode(',', $ids);
+        }
+
+        $db = \Config\Database::connect();
+        $trips = $db->table('trips')
+            ->select('
+                trips.*,
+                customers.first_name as c_first, customers.last_name as c_last, customers.phone as c_phone, customers.email as c_email,
+                drivers.first_name as d_first, drivers.last_name as d_last, drivers.phone as d_phone
+            ')
+            ->join('customers', 'customers.id = trips.customer_id', 'left')
+            ->join('drivers',   'drivers.id   = trips.driver_id',   'left')
+            ->whereIn('trips.id', $ids)
+            ->where('trips.deleted_at', null)
+            ->orderBy('trips.created_at', 'ASC')
+            ->get()->getResult();
+
+        if (empty($trips)) {
+            return redirect()->back()->with('error', 'No valid trips found.');
+        }
+
+        // We assume all selected trips belong to the same customer for a "Statement"
+        // If not, we still show the first customer's info in header for simplicity in this context
+        $customer = (object)[
+            'id' => $trips[0]->customer_id,
+            'first_name' => $trips[0]->c_first,
+            'last_name' => $trips[0]->c_last,
+            'phone' => $trips[0]->c_phone,
+            'email' => $trips[0]->c_email
+        ];
+
+        return view('Modules\Dispatch\Views\trips\statement', [
+            'trips' => $trips,
+            'customer' => $customer
+        ]);
+    }
 }
