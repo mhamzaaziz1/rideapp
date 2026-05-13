@@ -89,17 +89,46 @@ class FinanceController extends BaseController
             [$dateRange['start'], $dateRange['end']]
         )->getRow();
 
-        // ── Wallet Transaction Stats ────────────────────────────────────────
-        $walletStats = $db->query(
+        // ── Ledger / Sanity Check Stats ────────────────────────────────────────
+        $ledgerStats = $db->query(
             "SELECT 
-                COALESCE(SUM(CASE WHEN type = 'deposit' THEN amount ELSE 0 END), 0) as total_deposits,
-                COALESCE(SUM(CASE WHEN type = 'withdrawal' THEN amount ELSE 0 END), 0) as total_withdrawals,
-                COALESCE(SUM(CASE WHEN type = 'refund' THEN amount ELSE 0 END), 0) as total_refunds,
-                COALESCE(SUM(CASE WHEN type = 'commission' THEN amount ELSE 0 END), 0) as total_commissions_paid
-            FROM wallet_transactions 
-            WHERE created_at >= ? AND created_at <= ?",
-            [$dateRange['start'], $dateRange['end']]
+                COALESCE(SUM(balance), 0) as system_liability 
+             FROM ledgers 
+             WHERE owner_type IN ('customer', 'driver')"
         )->getRow();
+
+        // 24-hr daily revenue from Commission ledger transactions
+        $dailyRevenue = $db->query(
+            "SELECT COALESCE(SUM(amount), 0) as daily_revenue 
+             FROM ledger_transactions 
+             WHERE transaction_type = 'Commission' 
+             AND DATE(created_at) = CURRENT_DATE()"
+        )->getRow()->daily_revenue;
+
+        $sanityCheck = $db->query(
+            "SELECT 
+               DATE(t.created_at) as operation_date,
+               SUM(CASE WHEN source.owner_type = 'customer' THEN t.amount ELSE 0 END) as Total_Customer_Debits,
+               SUM(CASE WHEN dest.owner_type = 'driver' THEN t.amount ELSE 0 END) as Driver_Credits,
+               SUM(CASE WHEN dest.owner_type = 'company_revenue' THEN t.amount ELSE 0 END) as Company_Revenue,
+               (SUM(CASE WHEN source.owner_type = 'customer' THEN t.amount ELSE 0 END) - 
+                SUM(CASE WHEN dest.owner_type IN ('driver', 'company_revenue') THEN t.amount ELSE 0 END)) as Discrepancy
+            FROM ledger_transactions as t
+            JOIN ledgers source ON source.id = t.source_ledger_id
+            JOIN ledgers dest ON dest.id = t.destination_ledger_id
+            WHERE t.transaction_type IN ('Trip','Commission') 
+            GROUP BY DATE(t.created_at)
+            ORDER BY operation_date DESC
+            LIMIT 30"
+        )->getResultArray();
+
+        // Previous Wallet stats fallback (for views that rely on it)
+        $walletStats = (object)[
+            'total_deposits' => 0,
+            'total_withdrawals' => 0,
+            'total_refunds' => 0,
+            'total_commissions_paid' => 0
+        ];
 
         // ── Driver Payout Summary ───────────────────────────────────────────
         $driverPayouts = $db->query(
@@ -170,7 +199,12 @@ class FinanceController extends BaseController
             'period'           => $period,
             'date_range'       => $dateRange,
 
-            // Core KPIs
+            // New Ledger KPIs
+            'system_liability' => (float)($ledgerStats->system_liability ?? 0),
+            'daily_revenue'    => (float)$dailyRevenue,
+            'sanity_checks'    => $sanityCheck,
+
+             // Core KPIs
             'total_revenue'    => (float)$currentStats->total_revenue,
             'company_earnings' => $companyEarnings,
             'driver_payouts'   => (float)$currentStats->total_driver_earnings,

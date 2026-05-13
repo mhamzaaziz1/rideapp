@@ -196,11 +196,6 @@
             }
         }
     </style>
-    <script>
-        if (localStorage.getItem('jwt_token')) {
-            window.location.href = '<?= base_url('dispatch') ?>';
-        }
-    </script>
 </head>
 <body>
 
@@ -251,6 +246,9 @@
     </div>
 
     <script>
+        // Clear any old JWT token to prevent redirect loops and ensure clean state
+        localStorage.removeItem('jwt_token');
+
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = e.target.querySelector('button[type="submit"]');

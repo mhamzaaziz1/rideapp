@@ -61,3 +61,9 @@ $routes->group('api/webhooks', ['namespace' => 'Modules\Dispatch\Controllers'], 
     $routes->post('twilio/voice/gather-customer', 'TwilioVoiceController::gatherCustomer');
 });
 
+// SMS Webhooks (inbound messages from providers)
+$routes->group('sms/webhook', ['namespace' => 'Modules\Dispatch\Controllers'], function ($routes) {
+    $routes->post('twilio', 'SmsWebhookController::twilio');
+    $routes->post('telnyx', 'SmsWebhookController::telnyx');
+});
+

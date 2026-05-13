@@ -10,6 +10,7 @@ $routes->group('settings', ['namespace' => 'Modules\Setting\Controllers'], funct
     $routes->get('/', 'SettingController::index');
     $routes->get('clear-cache', 'SettingController::clear_cache');
     $routes->post('update', 'SettingController::update');
+    $routes->post('test-sms', 'SettingController::testSms');
 });
 
 // Global route for convenience if needed, though group covers it well.

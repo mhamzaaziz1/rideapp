@@ -5,6 +5,7 @@ namespace Modules\Dispatch\Controllers;
 use App\Controllers\BaseController;
 use Modules\Dispatch\Models\TripModel;
 use Modules\Dispatch\Entities\Trip;
+use App\Services\FinanceService;
 
 class TripController extends BaseController
 {
@@ -35,18 +36,11 @@ class TripController extends BaseController
         $trip->generateTripNumber();
         $trip->status = 'pending'; // Default status
 
-        // 1. Get Coordinates (or use NY Mock if empty)
-        if (empty($data['pickup_lat']) || empty($data['pickup_lng'])) {
-            $trip->pickup_lat = 40.7128; // NY
-            $trip->pickup_lng = -74.0060;
-            $trip->dropoff_lat = 40.6413; // JFK
-            $trip->dropoff_lng = -73.7781;
-        } else {
-            $trip->pickup_lat = $data['pickup_lat'];
-            $trip->pickup_lng = $data['pickup_lng'];
-            $trip->dropoff_lat = $data['dropoff_lat'] ?? null;
-            $trip->dropoff_lng = $data['dropoff_lng'] ?? null;
-        }
+        // 1. Get Coordinates
+        $trip->pickup_lat = $data['pickup_lat'] ?? null;
+        $trip->pickup_lng = $data['pickup_lng'] ?? null;
+        $trip->dropoff_lat = $data['dropoff_lat'] ?? null;
+        $trip->dropoff_lng = $data['dropoff_lng'] ?? null;
 
         // 2. Distance, Duration, and Fare
         $vType = $data['vehicle_type'] ?? 'standard';
@@ -225,8 +219,22 @@ class TripController extends BaseController
              }
         }
 
+        // Validate status transition if status is changing
+        if (isset($data['status']) && strtolower($data['status']) !== strtolower($trip->status)) {
+            if (!FinanceService::isValidTransition($trip->status, $data['status'])) {
+                return redirect()->back()->withInput()->with('error', 
+                    'Invalid status transition: ' . ucfirst($trip->status) . ' → ' . ucfirst($data['status']));
+            }
+        }
+
         if (!$this->tripModel->update($id, $data)) {
             return redirect()->back()->withInput()->with('error', 'Failed to update trip');
+        }
+
+        // Trigger Finance Ledger Logic if transitioning to completed (idempotent)
+        if (isset($data['status']) && strtolower($data['status']) === 'completed' && strtolower($trip->status) !== 'completed') {
+             $financeService = new FinanceService();
+             $financeService->completeTripFinance($id);
         }
 
         return redirect()->to('/dispatch/trips')->with('success', 'Trip updated successfully');
@@ -234,6 +242,16 @@ class TripController extends BaseController
 
     public function delete($id)
     {
+        $trip = $this->tripModel->find($id);
+        if (!$trip) {
+            return redirect()->to('/dispatch/trips')->with('error', 'Trip not found');
+        }
+
+        // Prevent deleting completed or active trips (audit trail protection)
+        if (in_array(strtolower($trip->status), ['completed', 'active'])) {
+            return redirect()->to('/dispatch/trips')->with('error', 'Cannot delete a trip that is ' . $trip->status . '. Cancel it first.');
+        }
+
         if ($this->tripModel->delete($id)) {
             return redirect()->to('/dispatch/trips')->with('success', 'Trip deleted successfully');
         }
@@ -243,13 +261,44 @@ class TripController extends BaseController
     public function updateStatus()
     {
         $id = $this->request->getPost('id');
-        $status = $this->request->getPost('status');
+        $newStatus = strtolower($this->request->getPost('status') ?? '');
 
-        if (!$id || !$status) {
+        if (!$id || !$newStatus) {
             return $this->response->setJSON(['success' => false, 'message' => 'Invalid data']);
         }
 
-        if ($this->tripModel->update($id, ['status' => $status])) {
+        $trip = $this->tripModel->find($id);
+        if (!$trip) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Trip not found']);
+        }
+
+        $currentStatus = strtolower($trip->status ?? 'pending');
+
+        // STATE MACHINE: Validate the transition
+        if (!FinanceService::isValidTransition($currentStatus, $newStatus)) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Invalid transition: ' . ucfirst($currentStatus) . ' → ' . ucfirst($newStatus)
+            ]);
+        }
+
+        $updateData = ['status' => $newStatus];
+
+        // Set timestamps on key transitions
+        if ($newStatus === 'active' && empty($trip->started_at)) {
+            $updateData['started_at'] = date('Y-m-d H:i:s');
+        }
+        if ($newStatus === 'completed' && empty($trip->completed_at)) {
+            $updateData['completed_at'] = date('Y-m-d H:i:s');
+        }
+
+        if ($this->tripModel->update($id, $updateData)) {
+             // Trigger Finance Ledger Logic if completed (idempotent — safe to call multiple times)
+             if ($newStatus === 'completed' && $currentStatus !== 'completed') {
+                  $financeService = new FinanceService();
+                  $financeService->completeTripFinance($id);
+             }
+
              return $this->response->setJSON(['success' => true]);
         }
 
@@ -258,94 +307,141 @@ class TripController extends BaseController
 
     public function index()
     {
-        // 1. Fetch All Trips with Joins
-        $builder = $this->tripModel->builder();
-        $builder->select('trips.*, customers.first_name as c_first, customers.last_name as c_last, customers.wallet_balance as c_wallet_balance, drivers.first_name as d_first, drivers.last_name as d_last, drivers.vehicle_model, drivers.rating as d_rating, drivers.wallet_balance as d_wallet_balance, customers.rating as c_rating, 
+        $request = \Config\Services::request();
+        $db = \Config\Database::connect();
+
+        // --- Filter parameters ---
+        $search   = $request->getGet('search');
+        $driverId = $request->getGet('driver_id');
+        $fromDate = $request->getGet('from_date');
+        $toDate   = $request->getGet('to_date');
+        $date     = $request->getGet('date');
+        $status   = $request->getGet('status');
+        $page     = max(1, (int) ($request->getGet('page') ?? 1));
+        $perPage  = 50;
+
+        // ── Helper: apply common filters to a builder ───────────────
+        $applyFilters = function ($builder) use ($search, $driverId, $fromDate, $toDate, $date, $status) {
+            if (!empty($search)) {
+                $builder->groupStart();
+                $builder->like('trips.trip_number', $search);
+                $builder->orLike('trips.pickup_address', $search);
+                $builder->orLike('trips.dropoff_address', $search);
+                $builder->orLike('c.first_name', $search);
+                $builder->orLike('c.last_name', $search);
+                $builder->orLike('d.first_name', $search);
+                $builder->orLike('d.last_name', $search);
+                $builder->groupEnd();
+            }
+            if (!empty($driverId))  $builder->where('trips.driver_id', $driverId);
+            if (!empty($fromDate))  $builder->where('trips.created_at >=', $fromDate . ' 00:00:00');
+            if (!empty($toDate))    $builder->where('trips.created_at <=', $toDate . ' 23:59:59');
+            if (!empty($date) && empty($fromDate) && empty($toDate)) {
+                $builder->like('trips.created_at', $date, 'after');
+            }
+            if (!empty($status))    $builder->where('trips.status', $status);
+        };
+
+        // ── Rating subquery select ──────────────────────────────────
+        $ratingSelect = ',
             (SELECT COUNT(*) FROM ratings WHERE ratings.trip_id = trips.id AND ratings.rater_type = "customer") as driver_is_rated_by_customer,
             (SELECT COUNT(*) FROM ratings WHERE ratings.trip_id = trips.id AND ratings.rater_type = "driver") as customer_is_rated_by_driver,
             (SELECT COUNT(*) FROM ratings WHERE ratings.trip_id = trips.id AND ratings.rater_type = "system" AND ratings.ratee_type = "driver") as system_rated_driver,
-            (SELECT COUNT(*) FROM ratings WHERE ratings.trip_id = trips.id AND ratings.rater_type = "system" AND ratings.ratee_type = "customer") as system_rated_customer');
-        $builder->join('customers', 'customers.id = trips.customer_id', 'left');
-        $builder->join('drivers', 'drivers.id = trips.driver_id', 'left');
-        $builder->where('trips.deleted_at', null);
+            (SELECT COUNT(*) FROM ratings WHERE ratings.trip_id = trips.id AND ratings.rater_type = "system" AND ratings.ratee_type = "customer") as system_rated_customer';
 
-        // --- Filtering Logic ---
-        $request = \Config\Services::request();
-        $search = $request->getGet('search');
-        $driverId = $request->getGet('driver_id');
-        $fromDate = $request->getGet('from_date');
-        $toDate = $request->getGet('to_date');
-        $date = $request->getGet('date'); // Legacy
-        $status = $request->getGet('status');
+        $baseSelect = 'trips.*, c.first_name as c_first, c.last_name as c_last, c.wallet_balance as c_wallet_balance, d.first_name as d_first, d.last_name as d_last, d.vehicle_model, d.rating as d_rating, d.wallet_balance as d_wallet_balance, c.rating as c_rating';
 
-        if (!empty($search)) {
-            $builder->groupStart();
-            $builder->like('trips.trip_number', $search);
-            $builder->orLike('trips.pickup_address', $search);
-            $builder->orLike('trips.dropoff_address', $search);
-            $builder->orLike('customers.first_name', $search);
-            $builder->orLike('customers.last_name', $search);
-            $builder->orLike('drivers.first_name', $search);
-            $builder->orLike('drivers.last_name', $search);
-            $builder->groupEnd();
-        }
+        // ── 1. Queue (pending) — always load ALL (small set) ────────
+        $queueBuilder = $db->table('trips');
+        $queueBuilder->select($baseSelect . $ratingSelect);
+        $queueBuilder->join('customers c', 'c.id = trips.customer_id', 'left');
+        $queueBuilder->join('drivers d', 'd.id = trips.driver_id', 'left');
+        $queueBuilder->where('trips.deleted_at', null);
+        $queueBuilder->whereNotIn('trips.status', ['completed', 'cancelled', 'active', 'dispatching']);
+        $applyFilters($queueBuilder);
+        $queueBuilder->orderBy('trips.created_at', 'DESC');
+        $queue = $queueBuilder->get()->getResult();
 
-        if (!empty($driverId)) {
-            $builder->where('trips.driver_id', $driverId);
-        }
+        // ── 2. Active (active/dispatching) — always load ALL ────────
+        $activeBuilder = $db->table('trips');
+        $activeBuilder->select($baseSelect . $ratingSelect);
+        $activeBuilder->join('customers c', 'c.id = trips.customer_id', 'left');
+        $activeBuilder->join('drivers d', 'd.id = trips.driver_id', 'left');
+        $activeBuilder->where('trips.deleted_at', null);
+        $activeBuilder->whereIn('trips.status', ['active', 'dispatching']);
+        $applyFilters($activeBuilder);
+        $activeBuilder->orderBy('trips.created_at', 'DESC');
+        $active = $activeBuilder->get()->getResult();
 
-        if (!empty($fromDate)) {
-            $builder->where('trips.created_at >=', $fromDate . ' 00:00:00');
-        }
-        if (!empty($toDate)) {
-            $builder->where('trips.created_at <=', $toDate . ' 23:59:59');
-        }
-        if (!empty($date) && empty($fromDate) && empty($toDate)) {
-            $builder->like('trips.created_at', $date, 'after'); // 'YYYY-MM-DD%'
-        }
+        // ── 3. History (completed/cancelled) — PAGINATED ────────────
+        $historyCountBuilder = $db->table('trips');
+        $historyCountBuilder->join('customers c', 'c.id = trips.customer_id', 'left');
+        $historyCountBuilder->join('drivers d', 'd.id = trips.driver_id', 'left');
+        $historyCountBuilder->where('trips.deleted_at', null);
+        $historyCountBuilder->whereIn('trips.status', ['completed', 'cancelled']);
+        $applyFilters($historyCountBuilder);
+        $totalHistory = $historyCountBuilder->countAllResults(); // Default resets the builder state
 
-        // If status filter is explicitly provided, use it. Otherwise, default logic applies in view categorization
-        if (!empty($status)) {
-            $builder->where('trips.status', $status);
-        }
+        $historyBuilder = $db->table('trips');
+        $historyBuilder->select($baseSelect . $ratingSelect);
+        $historyBuilder->join('customers c', 'c.id = trips.customer_id', 'left');
+        $historyBuilder->join('drivers d', 'd.id = trips.driver_id', 'left');
+        $historyBuilder->where('trips.deleted_at', null);
+        $historyBuilder->whereIn('trips.status', ['completed', 'cancelled']);
+        $applyFilters($historyBuilder);
+        $historyBuilder->orderBy('trips.created_at', 'DESC');
+        $historyBuilder->limit($perPage, ($page - 1) * $perPage);
+        $history = $historyBuilder->get()->getResult();
 
-        $builder->orderBy('trips.created_at', 'DESC');
-        
-        $allTrips = $builder->get()->getResult();
+        // ── Combine for "all" tab (queue + active + current history page)
+        $allTrips = array_merge($queue, $active, $history);
 
-        // 1.5 Fetch Disputes
-        $disputeModel = new \Modules\Dispatch\Models\DisputeModel();
-        $disputes = $disputeModel->findAll();
+        // ── Stats (efficient COUNT queries) ─────────────────────────
+        $statsRow = $db->query(
+            "SELECT
+                COUNT(*) as total,
+                SUM(CASE WHEN status IN ('active','dispatching') THEN 1 ELSE 0 END) as active_count,
+                SUM(CASE WHEN status IN ('completed','cancelled') THEN 1 ELSE 0 END) as history_count,
+                COALESCE(SUM(fare_amount), 0) as revenue
+             FROM trips WHERE deleted_at IS NULL"
+        )->getRow();
+
+        // ── Fetch disputes (only for trip IDs we have) ──────────────
+        $tripIds = array_column($allTrips, 'id');
         $disputesByTripId = [];
         $disputesById = [];
-        foreach ($disputes as $d) {
-            $disputesById[$d->id] = $d;
-            if ($d->trip_id) {
-                $disputesByTripId[$d->trip_id] = $d;
+        if (!empty($tripIds)) {
+            $disputeModel = new \Modules\Dispatch\Models\DisputeModel();
+            $disputes = $disputeModel->whereIn('trip_id', $tripIds)->findAll();
+            foreach ($disputes as $d) {
+                $disputesById[$d->id] = $d;
+                if ($d->trip_id) {
+                    $disputesByTripId[$d->trip_id] = $d;
+                }
             }
         }
 
-        // 2. bucket them
-        $queue = [];
-        $active = [];
-        $history = [];
-
+        // Attach disputes to trips
         foreach ($allTrips as &$t) {
             $t->dispute = $disputesByTripId[$t->id] ?? null;
-            if ($t->linked_dispute_id && isset($disputesById[$t->linked_dispute_id])) {
-                $t->linked_dispute = $disputesById[$t->linked_dispute_id];
-            } else {
-                $t->linked_dispute = null;
-            }
-
-            if (in_array($t->status, ['completed', 'cancelled'])) {
-                $history[] = $t;
-            } elseif (in_array($t->status, ['active', 'dispatching'])) {
-                $active[] = $t;
-            } else {
-                // Pending, or any other status goes to queue
-                $queue[] = $t;
-            }
+            $t->linked_dispute = ($t->linked_dispute_id && isset($disputesById[$t->linked_dispute_id]))
+                ? $disputesById[$t->linked_dispute_id] : null;
+        }
+        // Also attach to bucket arrays (they share object references)
+        foreach ($queue as &$t) {
+            $t->dispute = $disputesByTripId[$t->id] ?? null;
+            $t->linked_dispute = ($t->linked_dispute_id && isset($disputesById[$t->linked_dispute_id]))
+                ? $disputesById[$t->linked_dispute_id] : null;
+        }
+        foreach ($active as &$t) {
+            $t->dispute = $disputesByTripId[$t->id] ?? null;
+            $t->linked_dispute = ($t->linked_dispute_id && isset($disputesById[$t->linked_dispute_id]))
+                ? $disputesById[$t->linked_dispute_id] : null;
+        }
+        foreach ($history as &$t) {
+            $t->dispute = $disputesByTripId[$t->id] ?? null;
+            $t->linked_dispute = ($t->linked_dispute_id && isset($disputesById[$t->linked_dispute_id]))
+                ? $disputesById[$t->linked_dispute_id] : null;
         }
 
         // Fetch drivers for sidebar/modal
@@ -357,28 +453,32 @@ class TripController extends BaseController
         $allCustomers = $customerModel->where('deleted_at', null)->orderBy('first_name', 'ASC')->findAll();
 
         $data = [
-            'trips_queue' => $queue,
-            'trips_active' => $active,
+            'trips_queue'   => $queue,
+            'trips_active'  => $active,
             'trips_history' => $history,
-            'trips_all' => $allTrips,
-            'drivers' => $availableDrivers,
-            'customers' => $allCustomers,
-            'active_tab' => 'all', // Default active tab is now All Trips
+            'trips_all'     => $allTrips,
+            'drivers'       => $availableDrivers,
+            'customers'     => $allCustomers,
+            'active_tab'    => 'all',
             'filters' => [
-                'search' => $search,
+                'search'    => $search,
                 'driver_id' => $driverId,
                 'from_date' => $fromDate,
-                'to_date' => $toDate,
-                'date' => $date,
-                'status' => $status
+                'to_date'   => $toDate,
+                'date'      => $date,
+                'status'    => $status
             ],
-            
-            // Keep stats for the top bar
-            'total_trips' => count($allTrips),
-            'in_progress' => count($active),
-            'completed' => count($history), // roughly
-            'revenue' => $this->tripModel->selectSum('fare_amount')->first()->fare_amount ?? 0,
-            'title' => 'Dispatch Board'
+            // Pagination
+            'page'          => $page,
+            'per_page'      => $perPage,
+            'total_history' => $totalHistory,
+            'total_pages'   => max(1, ceil($totalHistory / $perPage)),
+            // Stats
+            'total_trips'   => (int) ($statsRow->total ?? 0),
+            'in_progress'   => (int) ($statsRow->active_count ?? 0),
+            'completed'     => (int) ($statsRow->history_count ?? 0),
+            'revenue'       => (float) ($statsRow->revenue ?? 0),
+            'title'         => 'Dispatch Board'
         ];
 
         // Handle AJAX Request for filtering without reload
@@ -424,11 +524,11 @@ class TripController extends BaseController
         $trip = $db->table('trips')
             ->select('
                 trips.*,
-                customers.first_name as c_first, customers.last_name as c_last, customers.phone as c_phone,
-                drivers.first_name as d_first, drivers.last_name as d_last, drivers.phone as d_phone
+                c.first_name as c_first, c.last_name as c_last, c.phone as c_phone,
+                d.first_name as d_first, d.last_name as d_last, d.phone as d_phone
             ')
-            ->join('customers', 'customers.id = trips.customer_id', 'left')
-            ->join('drivers',   'drivers.id   = trips.driver_id',   'left')
+            ->join('customers c', 'c.id = trips.customer_id', 'left')
+            ->join('drivers d',   'd.id   = trips.driver_id',   'left')
             ->where('trips.id', $id)
             ->where('trips.deleted_at', null)
             ->get()->getRow();
@@ -458,11 +558,11 @@ class TripController extends BaseController
         $trips = $db->table('trips')
             ->select('
                 trips.*,
-                customers.first_name as c_first, customers.last_name as c_last, customers.phone as c_phone,
-                drivers.first_name as d_first, drivers.last_name as d_last, drivers.phone as d_phone
+                c.first_name as c_first, c.last_name as c_last, c.phone as c_phone,
+                d.first_name as d_first, d.last_name as d_last, d.phone as d_phone
             ')
-            ->join('customers', 'customers.id = trips.customer_id', 'left')
-            ->join('drivers',   'drivers.id   = trips.driver_id',   'left')
+            ->join('customers c', 'c.id = trips.customer_id', 'left')
+            ->join('drivers d',   'd.id   = trips.driver_id',   'left')
             ->whereIn('trips.id', $ids)
              ->where('trips.deleted_at', null)
             ->orderBy('trips.created_at', 'DESC')
@@ -493,11 +593,11 @@ class TripController extends BaseController
         $trips = $db->table('trips')
             ->select('
                 trips.*,
-                customers.first_name as c_first, customers.last_name as c_last, customers.phone as c_phone, customers.email as c_email,
-                drivers.first_name as d_first, drivers.last_name as d_last, drivers.phone as d_phone
+                c.first_name as c_first, c.last_name as c_last, c.phone as c_phone, c.email as c_email,
+                d.first_name as d_first, d.last_name as d_last, d.phone as d_phone
             ')
-            ->join('customers', 'customers.id = trips.customer_id', 'left')
-            ->join('drivers',   'drivers.id   = trips.driver_id',   'left')
+            ->join('customers c', 'c.id = trips.customer_id', 'left')
+            ->join('drivers d',   'd.id   = trips.driver_id',   'left')
             ->whereIn('trips.id', $ids)
             ->where('trips.deleted_at', null)
             ->orderBy('trips.created_at', 'ASC')

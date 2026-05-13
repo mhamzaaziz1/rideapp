@@ -34,6 +34,10 @@ class Filters extends BaseFilters
         'forcehttps'    => ForceHTTPS::class,
         'pagecache'     => PageCache::class,
         'performance'   => PerformanceMetrics::class,
+        // IAM Filters
+        'auth_session'  => \Modules\IAM\Filters\AuthSessionFilter::class,
+        'permission'    => \Modules\IAM\Filters\PermissionFilter::class,
+        'jwt'           => \Modules\IAM\Filters\JwtFilter::class,
     ];
 
     /**
@@ -75,6 +79,13 @@ class Filters extends BaseFilters
             // 'honeypot',
             // 'csrf',
             // 'invalidchars',
+            'auth_session' => ['except' => [
+                'login', 'login/*', 'logout',
+                'index.php/login', 'index.php/login/*', 'index.php/logout',
+                'api/*', 'api_login.php',
+                'customer/*',
+                'sms/webhook/*',
+            ]],
         ],
         'after' => [
             // 'honeypot',

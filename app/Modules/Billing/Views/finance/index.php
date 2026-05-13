@@ -119,11 +119,10 @@
         </div>
     </div>
     <div class="kpi-card kc-indigo">
-        <div class="kpi-label">Company Earnings</div>
-        <div class="kpi-val">$<?= number_format($company_earnings, 2) ?></div>
-        <div class="kpi-growth <?= $growth_commission['direction'] ?>">
-            <i data-lucide="<?= $growth_commission['direction']==='up'?'trending-up':'trending-down' ?>" width="12"></i>
-            <?= $growth_commission['percent'] ?>%
+        <div class="kpi-label">System Liability (Wallet Funds)</div>
+        <div class="kpi-val">$<?= number_format($system_liability, 2) ?></div>
+        <div class="kpi-growth flat">
+            <i data-lucide="shield-alert" width="12"></i> Out in user wallets
         </div>
     </div>
     <div class="kpi-card kc-amber">
@@ -134,10 +133,10 @@
             <?= $growth_driver_pay['percent'] ?>%
         </div>
     </div>
-    <div class="kpi-card kc-red">
-        <div class="kpi-label">Pending Payments</div>
-        <div class="kpi-val">$<?= number_format($pending_amount, 2) ?></div>
-        <div class="kpi-growth flat"><?= $unpaid_invoices ?> invoices</div>
+    <div class="kpi-card kc-green">
+        <div class="kpi-label">Daily Revenue (24hr Cut)</div>
+        <div class="kpi-val">$<?= number_format($daily_revenue ?? 0, 2) ?></div>
+        <div class="kpi-growth up"><i data-lucide="clock" width="12"></i> Today's ledger config</div>
     </div>
     <div class="kpi-card kc-cyan">
         <div class="kpi-label">Total Trips</div>
@@ -222,13 +221,35 @@
             <div class="ms-item"><div class="ml">Company Net</div><div class="mv" style="color:var(--success)">$<?= number_format($company_earnings, 2) ?></div></div>
         </div>
     </div>
-    <div class="fin-panel">
-        <div class="fp-head"><div class="fp-title"><i data-lucide="wallet" width="16"></i> Wallet Activity</div></div>
-        <div class="ms-grid">
-            <div class="ms-item"><div class="ml">Deposits</div><div class="mv" style="color:var(--success)">$<?= number_format($total_deposits, 2) ?></div></div>
-            <div class="ms-item"><div class="ml">Withdrawals</div><div class="mv" style="color:var(--danger)">$<?= number_format($total_withdrawals, 2) ?></div></div>
-            <div class="ms-item"><div class="ml">Refunds</div><div class="mv">$<?= number_format($total_refunds, 2) ?></div></div>
-            <div class="ms-item"><div class="ml">Invoices Paid</div><div class="mv"><?= $paid_invoices ?> ($<?= number_format($paid_amount,0) ?>)</div></div>
+    <div class="fin-panel" style="grid-column: span 1">
+        <div class="fp-head"><div class="fp-title"><i data-lucide="shield-check" width="16"></i> Ledger Sanity & Reconciliation Audit</div></div>
+        <div style="overflow-x:auto">
+        <table class="ft-table" style="font-size: 0.75rem;">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Cust Debits</th>
+                    <th>Driver + Co Credits</th>
+                    <th>Discrepancy Check</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if(!empty($sanity_checks)): ?>
+                    <?php foreach($sanity_checks as $sc): ?>
+                    <tr style="<?= floatval($sc['Discrepancy']) != 0 ? 'background:rgba(239,68,68,0.1)' : '' ?>">
+                        <td><?= date('M d', strtotime($sc['operation_date'])) ?></td>
+                        <td>$<?= number_format($sc['Total_Customer_Debits'], 2) ?></td>
+                        <td>$<?= number_format($sc['Driver_Credits'] + $sc['Company_Revenue'], 2) ?></td>
+                        <td style="font-weight:700;color:<?= floatval($sc['Discrepancy']) == 0 ? 'var(--success)' : 'var(--danger)' ?>;">
+                            <?= floatval($sc['Discrepancy']) == 0 ? '✅ 0.00' : '❌ $'.number_format($sc['Discrepancy'], 2) ?>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <tr><td colspan="4" style="text-align:center;color:var(--text-tertiary);padding:1.5rem;">No ledger transactions yet.</td></tr>
+                <?php endif; ?>
+            </tbody>
+        </table>
         </div>
     </div>
 </div>

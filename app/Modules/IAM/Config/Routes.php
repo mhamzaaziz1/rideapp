@@ -6,6 +6,9 @@ use Config\Services;
 
 $routes = Services::routes();
 
+// =========================================================
+// Public Auth Routes (no auth required)
+// =========================================================
 $routes->group('api/auth', ['namespace' => 'Modules\IAM\Controllers'], function ($routes) {
     $routes->post('register', 'AuthController::register');
     $routes->post('login', 'AuthController::login');
@@ -19,7 +22,9 @@ $routes->post('login', 'AuthController::attemptLogin', ['namespace' => 'Modules\
 $routes->get('api_login.php', 'AuthController::index', ['namespace' => 'Modules\IAM\Controllers']);
 $routes->post('api_login.php', 'AuthController::login', ['namespace' => 'Modules\IAM\Controllers']);
 
+// =========================================================
 // Staff Management Routes
+// =========================================================
 $routes->group('staff', ['namespace' => 'Modules\IAM\Controllers'], function ($routes) {
     $routes->get('/', 'StaffController::index');
     $routes->get('new', 'StaffController::new');
@@ -27,5 +32,24 @@ $routes->group('staff', ['namespace' => 'Modules\IAM\Controllers'], function ($r
     $routes->get('edit/(:num)', 'StaffController::edit/$1');
     $routes->post('update/(:num)', 'StaffController::update/$1');
     $routes->get('delete/(:num)', 'StaffController::delete/$1');
+
+    // User-level Permission Management
+    $routes->get('permissions/(:num)', 'UserPermissionController::manage/$1');
+    $routes->post('permissions/save/(:num)', 'UserPermissionController::save/$1');
+    $routes->post('permissions/toggle', 'UserPermissionController::toggle');
 });
 
+// =========================================================
+// Role Management Routes
+// =========================================================
+$routes->group('roles', ['namespace' => 'Modules\IAM\Controllers'], function ($routes) {
+    $routes->get('/', 'RoleController::index');
+    $routes->get('new', 'RoleController::new');
+    $routes->post('create', 'RoleController::create');
+    $routes->get('view/(:num)', 'RoleController::view/$1');
+    $routes->get('edit/(:num)', 'RoleController::edit/$1');
+    $routes->post('update/(:num)', 'RoleController::update/$1');
+    $routes->get('delete/(:num)', 'RoleController::delete/$1');
+    $routes->get('permissions/(:num)', 'RoleController::getPermissions/$1');
+    $routes->get('audit-log', 'UserPermissionController::auditLog');
+});

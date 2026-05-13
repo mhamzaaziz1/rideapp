@@ -69,6 +69,26 @@ class DisputeController extends BaseController
         $status = $this->request->getPost('status');
         $resolution = $this->request->getPost('resolution');
 
+        // Validate legal transitions
+        $validTransitions = [
+            'open'          => ['investigating', 'resolved', 'closed'],
+            'investigating' => ['resolved', 'closed', 'open'],
+            'resolved'      => ['closed'],
+            'closed'        => [],  // Terminal
+        ];
+
+        $dispute = $this->disputeModel->find($id);
+        if (!$dispute) {
+            return redirect()->back()->with('error', 'Dispute not found.');
+        }
+
+        $currentStatus = $dispute->status ?? 'open';
+        $allowed = $validTransitions[$currentStatus] ?? [];
+
+        if (!in_array($status, $allowed)) {
+            return redirect()->back()->with('error', 'Invalid status transition: ' . ucfirst($currentStatus) . ' → ' . ucfirst($status));
+        }
+
         $updateData = ['status' => $status];
         
         if ($resolution) {
@@ -76,13 +96,8 @@ class DisputeController extends BaseController
         }
 
         if (in_array($status, ['resolved', 'closed'])) {
-            $updateData['resolved_by'] = session()->get('user_id'); // Ensure auth user id is 'user_id'
-        }
-
-        // Validate dispute
-        $dispute = $this->disputeModel->find($id);
-        if (!$dispute) {
-            return redirect()->back()->with('error', 'Dispute not found.');
+            $updateData['resolved_by'] = session()->get('user_id');
+            $updateData['resolved_at'] = date('Y-m-d H:i:s');
         }
 
         if ($this->disputeModel->update($id, $updateData)) {
@@ -128,6 +143,11 @@ class DisputeController extends BaseController
         $dispute = $this->disputeModel->find($id);
         if (!$dispute) {
             return redirect()->to('/admin/disputes')->with('error', 'Dispute not found.');
+        }
+
+        // Prevent deleting resolved/closed disputes (audit trail)
+        if (in_array($dispute->status, ['resolved', 'closed'])) {
+            return redirect()->back()->with('error', 'Cannot delete a resolved or closed dispute. It is part of the financial audit trail.');
         }
 
         if ($this->disputeModel->delete($id)) {
@@ -189,9 +209,9 @@ class DisputeController extends BaseController
         $prefix = ($dispute->dispute_type == 'Lost Item') ? 'RTN-' : 'RES-';
 
         $newTrip = [
-            'trip_number'      => $prefix . strtoupper(substr(uniqid(), -6)),
+            'trip_number'      => $prefix . strtoupper(bin2hex(random_bytes(4))),
             'customer_id'      => $originalTrip->customer_id,
-            'driver_id'        => $originalTrip->driver_id,
+            'driver_id'        => $this->request->getPost('driver_id') ?: $originalTrip->driver_id,
             'status'           => 'pending',
             'pickup_address'   => $pickupAddress,
             'dropoff_address'  => $dropoffAddress,
@@ -228,7 +248,7 @@ class DisputeController extends BaseController
             return redirect()->back()->with('error', 'Dispute is already resolved and settled.');
         }
 
-        $settleTo = $this->request->getPost('settle_to'); // 'customer' or 'driver'
+        $settleTo = $this->request->getPost('settle_to');
         $amount = (float) $this->request->getPost('amount');
         $notes = $this->request->getPost('notes');
 
@@ -236,145 +256,127 @@ class DisputeController extends BaseController
             return redirect()->back()->with('error', 'Invalid settlement amount.');
         }
 
-        $walletTxModel = new \Modules\Billing\Models\WalletTransactionModel();
+        // ── ATOMIC TRANSACTION ──────────────────────────────────────
+        $db = \Config\Database::connect();
+        $db->transBegin();
 
-        if ($settleTo == 'customer' && !empty($dispute->customer_id)) {
+        try {
+            $walletTxModel = new \Modules\Billing\Models\WalletTransactionModel();
             $customerModel = new \Modules\Customer\Models\CustomerModel();
-            $customer = $customerModel->find($dispute->customer_id);
-            if ($customer) {
-                // Deposit to customer
-                $newBalance = $customer->wallet_balance + $amount;
-                $customerModel->update($customer->id, ['wallet_balance' => $newBalance]);
+            $driverModel = new \Modules\Fleet\Models\DriverModel();
+
+            if ($settleTo == 'customer' && !empty($dispute->customer_id)) {
                 $walletTxModel->insert([
                     'user_type' => 'customer',
-                    'user_id' => $customer->id,
+                    'user_id' => $dispute->customer_id,
                     'type' => 'deposit',
                     'amount' => $amount,
                     'description' => 'Dispute Settlement Refund DSP-' . $dispute->id . ': ' . $notes
                 ]);
-            }
-        } elseif ($settleTo == 'driver' && !empty($dispute->driver_id)) {
-            $driverModel = new \Modules\Fleet\Models\DriverModel();
-            $driver = $driverModel->find($dispute->driver_id);
-            if ($driver) {
-                // Deposit to driver
-                $newBalance = $driver->wallet_balance + $amount;
-                $driverModel->update($driver->id, ['wallet_balance' => $newBalance]);
+            } elseif ($settleTo == 'driver' && !empty($dispute->driver_id)) {
                 $walletTxModel->insert([
                     'user_type' => 'driver',
-                    'user_id' => $driver->id,
+                    'user_id' => $dispute->driver_id,
                     'type' => 'deposit',
                     'amount' => $amount,
                     'description' => 'Dispute Settlement Payout DSP-' . $dispute->id . ': ' . $notes
                 ]);
-            }
-        } elseif ($settleTo == 'transfer_to_customer' && !empty($dispute->customer_id) && !empty($dispute->driver_id)) {
-            $customerModel = new \Modules\Customer\Models\CustomerModel();
-            $driverModel = new \Modules\Fleet\Models\DriverModel();
-            
-            $customer = $customerModel->find($dispute->customer_id);
-            $driver = $driverModel->find($dispute->driver_id);
-            
-            if ($customer && $driver) {
-                // Deduct from driver
-                $newDriverBalance = $driver->wallet_balance - $amount;
-                $driverModel->update($driver->id, ['wallet_balance' => $newDriverBalance]);
+            } elseif ($settleTo == 'transfer_to_customer' && !empty($dispute->customer_id) && !empty($dispute->driver_id)) {
                 $walletTxModel->insert([
                     'user_type' => 'driver',
-                    'user_id' => $driver->id,
+                    'user_id' => $dispute->driver_id,
                     'type' => 'withdrawal',
                     'amount' => $amount,
                     'description' => 'Dispute Fare Deduction DSP-' . $dispute->id . ': ' . $notes
                 ]);
-                
-                // Deposit to customer
-                $newCustomerBalance = $customer->wallet_balance + $amount;
-                $customerModel->update($customer->id, ['wallet_balance' => $newCustomerBalance]);
                 $walletTxModel->insert([
                     'user_type' => 'customer',
-                    'user_id' => $customer->id,
+                    'user_id' => $dispute->customer_id,
                     'type' => 'deposit',
                     'amount' => $amount,
                     'description' => 'Dispute Fare Transfer Refund DSP-' . $dispute->id . ': ' . $notes
                 ]);
-            } else {
-                return redirect()->back()->with('error', 'Customer or driver missing.');
-            }
-        } elseif ($settleTo == 'transfer_to_driver' && !empty($dispute->customer_id) && !empty($dispute->driver_id)) {
-            $customerModel = new \Modules\Customer\Models\CustomerModel();
-            $driverModel = new \Modules\Fleet\Models\DriverModel();
-            
-            $customer = $customerModel->find($dispute->customer_id);
-            $driver = $driverModel->find($dispute->driver_id);
-            
-            if ($customer && $driver) {
-                // Deduct from customer
-                $newCustomerBalance = $customer->wallet_balance - $amount;
-                $customerModel->update($customer->id, ['wallet_balance' => $newCustomerBalance]);
+            } elseif ($settleTo == 'transfer_to_driver' && !empty($dispute->customer_id) && !empty($dispute->driver_id)) {
                 $walletTxModel->insert([
                     'user_type' => 'customer',
-                    'user_id' => $customer->id,
+                    'user_id' => $dispute->customer_id,
                     'type' => 'withdrawal',
                     'amount' => $amount,
                     'description' => 'Dispute Fare Deduction DSP-' . $dispute->id . ': ' . $notes
                 ]);
-                
-                // Deposit to driver
-                $newDriverBalance = $driver->wallet_balance + $amount;
-                $driverModel->update($driver->id, ['wallet_balance' => $newDriverBalance]);
                 $walletTxModel->insert([
                     'user_type' => 'driver',
-                    'user_id' => $driver->id,
+                    'user_id' => $dispute->driver_id,
                     'type' => 'deposit',
                     'amount' => $amount,
                     'description' => 'Dispute Fare Transfer Payout DSP-' . $dispute->id . ': ' . $notes
                 ]);
             } else {
-                return redirect()->back()->with('error', 'Customer or driver missing.');
+                $db->transRollback();
+                return redirect()->back()->with('error', 'Invalid beneficiary or user missing.');
             }
-        } else {
-            return redirect()->back()->with('error', 'Invalid beneficiary or user missing.');
+
+            $settleText = $settleTo;
+            if ($settleTo == 'transfer_to_customer') {
+                $settleText = 'Customer (Deducted from driver)';
+            } elseif ($settleTo == 'transfer_to_driver') {
+                $settleText = 'Driver (Deducted from customer)';
+            }
+
+            // Resolve the dispute
+            $this->disputeModel->update($id, [
+                'status' => 'resolved',
+                'resolution' => "Settled \${$amount} payout to {$settleText}.\nNotes: {$notes}",
+                'resolved_by' => session()->get('user_id'),
+                'resolved_at' => date('Y-m-d H:i:s'),
+            ]);
+
+            $db->transCommit();
+
+        } catch (\Exception $e) {
+            $db->transRollback();
+            log_message('error', '[DisputeSettlement] ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Settlement failed: ' . $e->getMessage());
         }
 
-        $settleText = $settleTo;
-        if($settleTo == 'transfer_to_customer') {
-            $settleText = 'Customer (Deducted from driver)';
-        } elseif($settleTo == 'transfer_to_driver') {
-            $settleText = 'Driver (Deducted from customer)';
-        }
-
-        // Keep a record of the resolution and close the dispute loop
-        $this->disputeModel->update($id, [
-            'status' => 'resolved',
-            'resolution' => "Settled \${$amount} payout to {$settleText}.\nNotes: {$notes}",
-            'resolved_by' => session()->get('user_id')
-        ]);
-
-        // Sync stored wallet_balance for affected parties so it reflects the computed value
+        // Sync wallet balances AFTER the transaction is committed
+        // This recomputes from wallet_transactions, ensuring consistency
         if (!empty($dispute->customer_id) && in_array($settleTo, ['customer', 'transfer_to_customer', 'transfer_to_driver'])) {
             WalletService::syncBalance('customer', (int)$dispute->customer_id);
         }
         if (!empty($dispute->driver_id) && in_array($settleTo, ['driver', 'transfer_to_customer', 'transfer_to_driver'])) {
-            $driverModel = new \Modules\Fleet\Models\DriverModel();
-            $driver = $driverModel->find($dispute->driver_id);
+            $driver = (new \Modules\Fleet\Models\DriverModel())->find($dispute->driver_id);
             WalletService::syncBalance('driver', (int)$dispute->driver_id, (float)($driver->commission_rate ?? 25.00));
         }
 
         return redirect()->back()->with('success', 'Fare settled successfully.');
     }
 
-    // Changed to handle form-data appropriately for file uploads
+    // Sanitized API — only accept whitelisted fields
     public function apiCreate()
     {
-        $data = $this->request->getPost();
-        
+        // WHITELIST: only accept these fields from the client
+        $allowed = ['trip_id', 'customer_id', 'driver_id', 'reported_by', 'dispute_type', 'title', 'description'];
+        $rawData = $this->request->getPost();
+        $data = array_intersect_key($rawData, array_flip($allowed));
+
         // Handle file upload
         $file = $this->request->getFile('attachment');
         if ($file && $file->isValid() && !$file->hasMoved()) {
+            // Validate file type and size
+            if (!in_array($file->getMimeType(), ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'])) {
+                return $this->response->setJSON(['status' => 'error', 'message' => 'Invalid file type. Allowed: JPEG, PNG, WebP, PDF'])->setStatusCode(400);
+            }
+            if ($file->getSize() > 5 * 1024 * 1024) { // 5MB max
+                return $this->response->setJSON(['status' => 'error', 'message' => 'File too large. Maximum 5MB.'])->setStatusCode(400);
+            }
             $newName = $file->getRandomName();
             $file->move(FCPATH . 'assets/uploads/disputes', $newName);
-            $data['attachment'] = 'assets/uploads/disputes/' . $newName; // Storing relative path
+            $data['attachment'] = 'assets/uploads/disputes/' . $newName;
         }
+
+        // Force status to 'open' — never trust client for this
+        $data['status'] = 'open';
 
         if (!$this->disputeModel->save($data)) {
             return $this->response->setJSON([

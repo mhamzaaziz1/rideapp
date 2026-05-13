@@ -302,36 +302,257 @@
                 <div class="section-title">Push Notifications (Pusher)</div>
                 <div class="form-group">
                     <label class="form-label">App ID</label>
-                    <input type="text" class="form-input" name="pusher_app_id" placeholder="e.g. 193...">
+                    <input type="text" class="form-input" name="pusher_app_id" value="<?= $settings['pusher_app_id'] ?? '' ?>" placeholder="e.g. 193...">
                 </div>
                 <div class="form-group">
                     <label class="form-label">App Key</label>
-                    <input type="text" class="form-input" name="pusher_key" placeholder="e.g. a1b2c3...">
+                    <input type="text" class="form-input" name="pusher_key" value="<?= $settings['pusher_key'] ?? '' ?>" placeholder="e.g. a1b2c3...">
                 </div>
                 <div class="form-group">
                     <label class="form-label">App Secret</label>
-                    <input type="password" class="form-input" name="pusher_secret">
+                    <input type="password" class="form-input" name="pusher_secret" value="<?= $settings['pusher_secret'] ?? '' ?>">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Cluster</label>
-                    <input type="text" class="form-input" name="pusher_cluster" placeholder="e.g. mt1">
+                    <input type="text" class="form-input" name="pusher_cluster" value="<?= $settings['pusher_cluster'] ?? '' ?>" placeholder="e.g. mt1">
                 </div>
 
+                <!-- SMS Gateway Section -->
                 <div style="margin-top:2rem; padding-top:1.5rem; border-top:1px solid var(--border-color)">
-                    <div class="section-title">SMS & Voice (Twilio)</div>
-                    <div class="form-group">
-                        <label class="form-label">Account SID</label>
-                        <input type="text" class="form-input" name="twilio_sid" placeholder="e.g. AC...">
+                    <div class="section-title" style="display:flex; align-items:center; justify-content:space-between;">
+                        <span style="display:flex; align-items:center; gap:10px;">
+                            <i data-lucide="message-circle" width="20"></i> SMS Gateway
+                        </span>
+                        <?php if($smsStatus): ?>
+                        <span style="font-size:0.7rem; font-weight:600; padding:4px 10px; border-radius:20px; letter-spacing:0.5px; <?= $smsStatus['configured'] ? 'background:rgba(16,185,129,0.1); color:var(--success);' : 'background:rgba(239,68,68,0.1); color:var(--danger);' ?>">
+                            <span style="display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:4px; vertical-align:middle; <?= $smsStatus['configured'] ? 'background:var(--success);' : 'background:var(--danger);' ?>"></span>
+                            <?= $smsStatus['configured'] ? 'CONNECTED' : 'NOT CONFIGURED' ?>
+                        </span>
+                        <?php endif; ?>
                     </div>
-                    <div class="form-group">
-                        <label class="form-label">Auth Token</label>
-                        <input type="password" class="form-input" name="twilio_token">
+
+                    <?php if($smsStats): ?>
+                    <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:1.5rem;">
+                        <div style="background:var(--bg-body); border:1px solid var(--border-color); border-radius:8px; padding:0.8rem; text-align:center;">
+                            <div style="font-size:1.2rem; font-weight:700; color:var(--primary);"><?= $smsStats['today_sent'] ?></div>
+                            <div style="font-size:0.65rem; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-secondary); margin-top:2px;">Sent Today</div>
+                        </div>
+                        <div style="background:var(--bg-body); border:1px solid var(--border-color); border-radius:8px; padding:0.8rem; text-align:center;">
+                            <div style="font-size:1.2rem; font-weight:700; color:var(--success);"><?= $smsStats['total_sent'] ?></div>
+                            <div style="font-size:0.65rem; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-secondary); margin-top:2px;">Total Sent</div>
+                        </div>
+                        <div style="background:var(--bg-body); border:1px solid var(--border-color); border-radius:8px; padding:0.8rem; text-align:center;">
+                            <div style="font-size:1.2rem; font-weight:700; color:var(--danger);"><?= $smsStats['total_failed'] ?></div>
+                            <div style="font-size:0.65rem; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-secondary); margin-top:2px;">Failed</div>
+                        </div>
+                        <div style="background:var(--bg-body); border:1px solid var(--border-color); border-radius:8px; padding:0.8rem; text-align:center;">
+                            <div style="font-size:1.2rem; font-weight:700; color:var(--text-primary);"><?= $smsStats['total_received'] ?></div>
+                            <div style="font-size:0.65rem; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-secondary); margin-top:2px;">Received</div>
+                        </div>
                     </div>
+                    <?php endif; ?>
+
+                    <p style="color:var(--text-secondary); font-size:0.85rem; margin-bottom:1.5rem;">
+                        Choose your SMS provider for sending trip notifications, OTP codes, and driver alerts.
+                    </p>
+
+                    <!-- Provider Selector -->
                     <div class="form-group">
-                        <label class="form-label">Twilio Phone Number</label>
-                        <input type="text" class="form-input" name="twilio_number" placeholder="e.g. +1555...">
+                        <label class="form-label">SMS Provider</label>
+                        <div style="display:flex; gap:12px; margin-top:6px;">
+                            <?php $currentProvider = $settings['sms_provider'] ?? 'twilio'; ?>
+                            
+                            <label id="sms-provider-twilio-label" style="flex:1; display:flex; align-items:center; gap:12px; padding:1rem; border:2px solid var(--border-color); border-radius:var(--radius-md); cursor:pointer; transition:all 0.2s;" class="<?= $currentProvider === 'twilio' ? 'sms-provider-active' : '' ?>">
+                                <input type="radio" name="sms_provider" value="twilio" <?= $currentProvider === 'twilio' ? 'checked' : '' ?> onchange="toggleSmsProvider(this.value)" style="accent-color:var(--primary);">
+                                <div>
+                                    <div style="font-weight:700; font-size:0.95rem; color:var(--text-primary);">Twilio</div>
+                                    <div style="font-size:0.75rem; color:var(--text-secondary);">Industry-standard SMS & Voice API</div>
+                                </div>
+                            </label>
+
+                            <label id="sms-provider-telnyx-label" style="flex:1; display:flex; align-items:center; gap:12px; padding:1rem; border:2px solid var(--border-color); border-radius:var(--radius-md); cursor:pointer; transition:all 0.2s;" class="<?= $currentProvider === 'telnyx' ? 'sms-provider-active' : '' ?>">
+                                <input type="radio" name="sms_provider" value="telnyx" <?= $currentProvider === 'telnyx' ? 'checked' : '' ?> onchange="toggleSmsProvider(this.value)" style="accent-color:var(--primary);">
+                                <div>
+                                    <div style="font-weight:700; font-size:0.95rem; color:var(--text-primary);">Telnyx</div>
+                                    <div style="font-size:0.75rem; color:var(--text-secondary);">Cost-effective carrier-grade messaging</div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Twilio Fields -->
+                    <div id="sms-twilio-fields" style="<?= $currentProvider !== 'twilio' ? 'display:none;' : '' ?> animation: fadeIn 0.3s ease;">
+                        <div style="background:var(--bg-body); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:1.5rem; margin-top:1rem;">
+                            <div style="font-weight:600; margin-bottom:1rem; display:flex; align-items:center; gap:8px;">
+                                <span style="width:8px; height:8px; border-radius:50%; background:#e74c3c; display:inline-block;"></span>
+                                Twilio Configuration
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Account SID</label>
+                                <input type="text" class="form-input" name="twilio_sid" value="<?= $settings['twilio_sid'] ?? '' ?>" placeholder="e.g. AC1a2b3c4d5e...">
+                                <div class="form-help">Found in your <a href="https://console.twilio.com" target="_blank" style="color:var(--primary);">Twilio Console</a> dashboard.</div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Auth Token</label>
+                                <input type="password" class="form-input" name="twilio_token" value="<?= $settings['twilio_token'] ?? '' ?>">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Phone Number</label>
+                                <input type="text" class="form-input" name="twilio_number" value="<?= $settings['twilio_number'] ?? '' ?>" placeholder="e.g. +15551234567">
+                                <div class="form-help">Your Twilio phone number in E.164 format.</div>
+                            </div>
+                            <div style="background:rgba(99,102,241,0.06); padding:1rem; border-radius:8px; border-left:3px solid var(--primary); margin-top:1rem;">
+                                <div style="font-size:0.8rem; font-weight:600; color:var(--primary); margin-bottom:4px;">📥 Inbound SMS Webhook</div>
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <code id="twilio-webhook-url" style="font-size:0.75rem; color:var(--text-secondary); word-break:break-all; flex:1;"><?= base_url('sms/webhook/twilio') ?></code>
+                                    <button type="button" onclick="copyWebhookUrl('twilio-webhook-url', this)" style="background:none; border:1px solid var(--border-color); border-radius:4px; padding:4px 8px; cursor:pointer; font-size:0.7rem; color:var(--text-secondary); white-space:nowrap;" title="Copy URL"><i data-lucide="copy" width="12"></i></button>
+                                </div>
+                                <div style="font-size:0.7rem; color:var(--text-secondary); margin-top:4px;">Set this URL in your Twilio phone number → Messaging → "A MESSAGE COMES IN" webhook.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Telnyx Fields -->
+                    <div id="sms-telnyx-fields" style="<?= $currentProvider !== 'telnyx' ? 'display:none;' : '' ?> animation: fadeIn 0.3s ease;">
+                        <div style="background:var(--bg-body); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:1.5rem; margin-top:1rem;">
+                            <div style="font-weight:600; margin-bottom:1rem; display:flex; align-items:center; gap:8px;">
+                                <span style="width:8px; height:8px; border-radius:50%; background:#00c48f; display:inline-block;"></span>
+                                Telnyx Configuration
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">API Key</label>
+                                <input type="password" class="form-input" name="telnyx_api_key" value="<?= $settings['telnyx_api_key'] ?? '' ?>" placeholder="KEY01...">
+                                <div class="form-help">Found in your <a href="https://portal.telnyx.com/#/app/api-keys" target="_blank" style="color:var(--primary);">Telnyx Portal</a> → API Keys.</div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Phone Number</label>
+                                <input type="text" class="form-input" name="telnyx_number" value="<?= $settings['telnyx_number'] ?? '' ?>" placeholder="e.g. +15551234567">
+                                <div class="form-help">Your Telnyx phone number in E.164 format.</div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Messaging Profile ID <span style="font-size:0.7rem; color:var(--text-secondary); font-weight:normal;">(optional)</span></label>
+                                <input type="text" class="form-input" name="telnyx_messaging_profile_id" value="<?= $settings['telnyx_messaging_profile_id'] ?? '' ?>" placeholder="e.g. 40017...">
+                                <div class="form-help">Found in Telnyx Portal → Messaging → Messaging Profiles.</div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Public Key <span style="font-size:0.7rem; color:var(--text-secondary); font-weight:normal;">(for webhook verification)</span></label>
+                                <input type="text" class="form-input" name="telnyx_public_key" value="<?= $settings['telnyx_public_key'] ?? '' ?>" placeholder="Public key for signature verification">
+                            </div>
+                            <div style="background:rgba(0,196,143,0.08); padding:1rem; border-radius:8px; border-left:3px solid #00c48f; margin-top:1rem;">
+                                <div style="font-size:0.8rem; font-weight:600; color:#00c48f; margin-bottom:4px;">📥 Inbound SMS Webhook</div>
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <code id="telnyx-webhook-url" style="font-size:0.75rem; color:var(--text-secondary); word-break:break-all; flex:1;"><?= base_url('sms/webhook/telnyx') ?></code>
+                                    <button type="button" onclick="copyWebhookUrl('telnyx-webhook-url', this)" style="background:none; border:1px solid var(--border-color); border-radius:4px; padding:4px 8px; cursor:pointer; font-size:0.7rem; color:var(--text-secondary); white-space:nowrap;" title="Copy URL"><i data-lucide="copy" width="12"></i></button>
+                                </div>
+                                <div style="font-size:0.7rem; color:var(--text-secondary); margin-top:4px;">Set this URL in your Telnyx Messaging Profile → Inbound Settings → Webhook URL.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Test SMS -->
+                    <div style="margin-top:1.5rem; background:var(--bg-body); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:1.5rem;">
+                        <div style="font-weight:600; margin-bottom:1rem; display:flex; align-items:center; gap:8px;">
+                            <i data-lucide="send" width="16"></i> Send Test SMS
+                        </div>
+                        <div style="display:flex; gap:10px; align-items:flex-end;">
+                            <div style="flex:1;">
+                                <label class="form-label" style="font-size:0.8rem;">Phone Number</label>
+                                <input type="text" class="form-input" id="test_sms_number" placeholder="+1555..." style="font-size:0.9rem;">
+                            </div>
+                            <button type="button" class="btn btn-primary btn-sm" onclick="sendTestSms()" id="btn-test-sms" style="padding:0.6rem 1.2rem; display:flex; align-items:center; gap:6px; white-space:nowrap;">
+                                <i data-lucide="zap" width="14"></i> Send Test
+                            </button>
+                        </div>
+                        <div id="test-sms-result" style="margin-top:10px; font-size:0.8rem; display:none;"></div>
+                        <div class="form-help" style="margin-top:8px;">Save your settings first, then send a test message to verify connectivity.</div>
                     </div>
                 </div>
+
+                <style>
+                    .sms-provider-active { border-color: var(--primary) !important; background: rgba(99,102,241,0.04); }
+                    @keyframes fadeIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+                    @keyframes spin { to { transform: rotate(360deg); } }
+                    .spin { animation: spin 1s linear infinite; }
+                </style>
+
+                <script>
+                function toggleSmsProvider(provider) {
+                    document.getElementById('sms-twilio-fields').style.display = provider === 'twilio' ? '' : 'none';
+                    document.getElementById('sms-telnyx-fields').style.display = provider === 'telnyx' ? '' : 'none';
+                    
+                    document.getElementById('sms-provider-twilio-label').classList.toggle('sms-provider-active', provider === 'twilio');
+                    document.getElementById('sms-provider-telnyx-label').classList.toggle('sms-provider-active', provider === 'telnyx');
+
+                    // Re-trigger animation
+                    const activePanel = document.getElementById('sms-' + provider + '-fields');
+                    activePanel.style.animation = 'none';
+                    activePanel.offsetHeight; // reflow
+                    activePanel.style.animation = 'fadeIn 0.3s ease';
+                }
+
+                function sendTestSms() {
+                    const phone = document.getElementById('test_sms_number').value.trim();
+                    const btn = document.getElementById('btn-test-sms');
+                    const result = document.getElementById('test-sms-result');
+
+                    if (!phone) {
+                        result.style.display = 'block';
+                        result.style.color = 'var(--danger)';
+                        result.textContent = 'Please enter a phone number.';
+                        return;
+                    }
+
+                    btn.disabled = true;
+                    btn.innerHTML = '<i data-lucide="loader" width="14" class="spin"></i> Sending...';
+                    result.style.display = 'block';
+                    result.style.color = 'var(--text-secondary)';
+                    result.textContent = 'Sending test message...';
+
+                    fetch('<?= base_url("settings/test-sms") ?>', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                        body: JSON.stringify({ phone: phone })
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        result.style.display = 'block';
+                        if (data.success) {
+                            result.style.color = 'var(--success)';
+                            result.textContent = '✅ ' + data.message;
+                        } else {
+                            result.style.color = 'var(--danger)';
+                            result.textContent = '❌ ' + data.message;
+                        }
+                    })
+                    .catch(err => {
+                        result.style.display = 'block';
+                        result.style.color = 'var(--danger)';
+                        result.textContent = '❌ Network error: ' + err.message;
+                    })
+                    .finally(() => {
+                        btn.disabled = false;
+                        btn.innerHTML = '<i data-lucide="zap" width="14"></i> Send Test';
+                        if (typeof lucide !== 'undefined') lucide.createIcons();
+                    });
+                }
+
+                function copyWebhookUrl(elementId, btn) {
+                    const url = document.getElementById(elementId).textContent;
+                    navigator.clipboard.writeText(url).then(() => {
+                        const orig = btn.innerHTML;
+                        btn.innerHTML = '<i data-lucide="check" width="12"></i>';
+                        btn.style.color = 'var(--success)';
+                        btn.style.borderColor = 'var(--success)';
+                        if (typeof lucide !== 'undefined') lucide.createIcons();
+                        setTimeout(() => {
+                            btn.innerHTML = orig;
+                            btn.style.color = '';
+                            btn.style.borderColor = '';
+                            if (typeof lucide !== 'undefined') lucide.createIcons();
+                        }, 2000);
+                    });
+                }
+                </script>
             <?php elseif($tab == 'templates'): ?>
                 <div class="section-title">SMS Templates</div>
                 <p style="color:var(--text-secondary); margin-bottom:1.5rem; font-size:0.9rem;">
@@ -340,23 +561,23 @@
                 
                 <div class="form-group">
                     <label class="form-label">Trip Created</label>
-                    <textarea class="form-input" rows="2" name="tpl_trip_created">Hi {name}, your trip has been scheduled. Your driver {driver} will arrive in {eta} min.</textarea>
+                    <textarea class="form-input" rows="2" name="tpl_trip_created"><?= $settings['tpl_trip_created'] ?? 'Hi {name}, your trip has been scheduled. Your driver {driver} will arrive in {eta} min.' ?></textarea>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Driver Arrived</label>
-                    <textarea class="form-input" rows="2" name="tpl_driver_arrived">Hi {name}, your driver {driver} has arrived at the pickup location.</textarea>
+                    <textarea class="form-input" rows="2" name="tpl_driver_arrived"><?= $settings['tpl_driver_arrived'] ?? 'Hi {name}, your driver {driver} has arrived at the pickup location.' ?></textarea>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Trip Completed (Receipt)</label>
-                    <textarea class="form-input" rows="2" name="tpl_trip_completed">Thanks for riding with us, {name}! Your total was {amount}. Receipt: {receipt_url}</textarea>
+                    <textarea class="form-input" rows="2" name="tpl_trip_completed"><?= $settings['tpl_trip_completed'] ?? 'Thanks for riding with us, {name}! Your total was {amount}. Receipt: {receipt_url}' ?></textarea>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Driver Trip Offer</label>
-                    <textarea class="form-input" rows="2" name="tpl_driver_offer">New Trip Request: Pickup at {pickup_address}. Distance: {distance}. Earnings: {fare}. Reply ACCEPT to take this trip.</textarea>
+                    <textarea class="form-input" rows="2" name="tpl_driver_offer"><?= $settings['tpl_driver_offer'] ?? 'New Trip Request: Pickup at {pickup_address}. Distance: {distance}. Earnings: {fare}. Reply ACCEPT to take this trip.' ?></textarea>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Verification Code (OTP)</label>
-                    <textarea class="form-input" rows="2" name="tpl_otp">Your verification code is: {code}. Do not share this with anyone.</textarea>
+                    <textarea class="form-input" rows="2" name="tpl_otp"><?= $settings['tpl_otp'] ?? 'Your verification code is: {code}. Do not share this with anyone.' ?></textarea>
                 </div>
             <?php elseif($tab == 'payments'): ?>
                 <div class="section-title">Online Payments (Stripe)</div>

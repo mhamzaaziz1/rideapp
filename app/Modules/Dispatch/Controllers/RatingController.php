@@ -29,7 +29,7 @@ class RatingController extends BaseController
      */
     public function submit()
     {
-        // Try to get JSON data first (for AJAX requests)
+        // Unified data source: try JSON first, fall back to POST
         try {
             $json = $this->request->getJSON(true);
         } catch (\Exception $e) {
@@ -38,31 +38,45 @@ class RatingController extends BaseController
 
         $data = $json ?? $this->request->getPost();
 
-        // Validation rules
-        $rules = [
-            'trip_id'    => 'required|integer',
-            'rater_type' => 'required|in_list[driver,customer,system]',
-            'ratee_type' => 'permit_empty|in_list[driver,customer]',
-            'ratee_id'   => 'permit_empty|integer',
-            'rating'     => 'required|integer|greater_than_equal_to[1]|less_than_equal_to[5]',
-            'comment'    => 'permit_empty|string|max_length[1000]'
-        ];
+        // ── MANUAL VALIDATION (fixes JSON body bypass) ─────────────
+        $errors = [];
 
-        if (!$this->validate($rules)) {
-            return $this->response->setJSON([
-                'status' => 'error',
-                'errors' => $this->validator->getErrors()
-            ])->setStatusCode(400); 
+        $tripId = filter_var($data['trip_id'] ?? null, FILTER_VALIDATE_INT);
+        if (!$tripId) {
+            $errors['trip_id'] = 'Trip ID is required and must be an integer.';
         }
 
-        $tripId = $data['trip_id'];
-        $rateeType = $data['ratee_type'] ?? null;
-        $rateeId = $data['ratee_id'] ?? null;
-        $raterType = $data['rater_type'] ?? 'system';
-        $raterId = $data['rater_id'] ?? 0;
-        $ratingScore = $data['rating'];
-        $comment = $data['comment'] ?? '';
+        $raterType = $data['rater_type'] ?? '';
+        if (!in_array($raterType, ['driver', 'customer', 'system'])) {
+            $errors['rater_type'] = 'Rater type must be one of: driver, customer, system.';
+        }
 
+        $rateeType = $data['ratee_type'] ?? null;
+        if ($rateeType !== null && !in_array($rateeType, ['driver', 'customer', ''])) {
+            $errors['ratee_type'] = 'Ratee type must be driver or customer.';
+        }
+
+        $rateeId = isset($data['ratee_id']) ? filter_var($data['ratee_id'], FILTER_VALIDATE_INT) : null;
+        $raterId = isset($data['rater_id']) ? filter_var($data['rater_id'], FILTER_VALIDATE_INT) : 0;
+
+        $ratingScore = filter_var($data['rating'] ?? null, FILTER_VALIDATE_INT);
+        if (!$ratingScore || $ratingScore < 1 || $ratingScore > 5) {
+            $errors['rating'] = 'Rating must be an integer between 1 and 5.';
+        }
+
+        $comment = trim($data['comment'] ?? '');
+        if (strlen($comment) > 1000) {
+            $errors['comment'] = 'Comment must be 1000 characters or less.';
+        }
+
+        if (!empty($errors)) {
+            return $this->response->setJSON([
+                'status' => 'error',
+                'errors' => $errors
+            ])->setStatusCode(400);
+        }
+
+        // ── TRIP VALIDATION ────────────────────────────────────────
         if ($raterId == 0) { $raterType = 'system'; }
 
         $trip = $this->tripModel->find($tripId);
@@ -70,9 +84,31 @@ class RatingController extends BaseController
             return $this->response->setJSON(['status' => 'error', 'message' => 'Trip not found'])->setStatusCode(404);
         }
 
-        // Logic for Dispatch Board (System) Ratings
+        // Only allow rating completed trips
+        if (strtolower($trip->status) !== 'completed') {
+            return $this->response->setJSON([
+                'status' => 'error',
+                'message' => 'Ratings can only be submitted for completed trips. Current status: ' . ucfirst($trip->status)
+            ])->setStatusCode(422);
+        }
+
+        // ── TIME WINDOW: 72 hours for non-system ratings ───────────
+        if ($raterType !== 'system') {
+            $completedAt = $trip->completed_at ?? $trip->updated_at ?? $trip->created_at;
+            if ($completedAt) {
+                $deadline = strtotime($completedAt) + (72 * 3600); // 72 hours
+                if (time() > $deadline) {
+                    return $this->response->setJSON([
+                        'status' => 'error',
+                        'message' => 'Rating window has expired. Ratings must be submitted within 72 hours of trip completion.'
+                    ])->setStatusCode(422);
+                }
+            }
+        }
+
+        // ── RATEE RESOLUTION ───────────────────────────────────────
         if ($raterId == 0) {
-            // If dispatch board didn't specify ratee_type/id, derive it (fallback)
+            // Dispatch board / system rating
             if (empty($rateeType)) {
                 $rateeType = ($raterType === 'driver') ? 'customer' : 'driver';
             }
@@ -80,7 +116,7 @@ class RatingController extends BaseController
                 $rateeId = ($rateeType === 'driver') ? $trip->driver_id : $trip->customer_id;
             }
         } else {
-            // Original logic for Driver/Customer self-service ratings
+            // Self-service rating: verify the rater participated in this trip
             $rateeType = ($raterType === 'driver') ? 'customer' : 'driver';
             if ($raterType === 'driver') {
                 if ($trip->driver_id != $raterId) {
@@ -95,7 +131,11 @@ class RatingController extends BaseController
             }
         }
 
-        // Check for existing rating (specifically for this trip + rater + ratee combo)
+        if (empty($rateeId)) {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Cannot determine ratee. Trip may be missing a driver or customer.'])->setStatusCode(400);
+        }
+
+        // ── DUPLICATE CHECK ────────────────────────────────────────
         $existing = $this->ratingModel->where([
             'trip_id'    => $tripId,
             'rater_type' => $raterType,
@@ -108,8 +148,8 @@ class RatingController extends BaseController
             return $this->response->setJSON(['status' => 'error', 'message' => 'This participant has already been rated for this trip.'])->setStatusCode(409);
         }
 
-        // Save Rating
-        $data = [
+        // ── SAVE RATING ────────────────────────────────────────────
+        $insertData = [
             'trip_id'    => $tripId,
             'rater_type' => $raterType,
             'rater_id'   => $raterId,
@@ -119,7 +159,7 @@ class RatingController extends BaseController
             'comment'    => $comment
         ];
 
-        if ($this->ratingModel->save($data)) {
+        if ($this->ratingModel->save($insertData)) {
             // Update Average Rating for the Ratee
             $this->updateEntityRating($rateeType, $rateeId);
 
@@ -131,43 +171,95 @@ class RatingController extends BaseController
 
     /**
      * Get Ratings for a specific entity (Driver or Customer)
-     * GET /dispatch/ratings/list?type=driver&id=1
+     * GET /dispatch/ratings/list?type=driver&id=1&page=1&limit=20
      */
     public function list()
     {
         $type = $this->request->getGet('type');
         $id = $this->request->getGet('id');
+        $page = max(1, (int) ($this->request->getGet('page') ?? 1));
+        $limit = min(50, max(1, (int) ($this->request->getGet('limit') ?? 20)));
 
         if (!in_array($type, ['driver', 'customer']) || empty($id)) {
             return $this->response->setJSON(['status' => 'error', 'message' => 'Invalid parameters'])->setStatusCode(400);
         }
 
+        $id = (int) $id;
+        $offset = ($page - 1) * $limit;
+
+        // Total count
+        $total = $this->ratingModel->where('ratee_type', $type)->where('ratee_id', $id)->countAllResults(false);
+
+        // Paginated ratings
         $ratings = $this->ratingModel->where('ratee_type', $type)
                                      ->where('ratee_id', $id)
                                      ->orderBy('created_at', 'DESC')
-                                     ->findAll();
+                                     ->findAll($limit, $offset);
 
-        return $this->response->setJSON(['status' => 'success', 'data' => $ratings]);
+        // Average
+        $builder = $this->ratingModel->builder();
+        $builder->selectAvg('rating', 'avg_rating');
+        $builder->selectCount('rating', 'total_ratings');
+        $builder->where('ratee_type', $type);
+        $builder->where('ratee_id', $id);
+        $stats = $builder->get()->getRow();
+
+        return $this->response->setJSON([
+            'status' => 'success',
+            'data' => $ratings,
+            'meta' => [
+                'page'          => $page,
+                'limit'         => $limit,
+                'total'         => $total,
+                'pages'         => ceil($total / $limit),
+                'average'       => round((float) ($stats->avg_rating ?? 0), 1),
+                'total_ratings' => (int) ($stats->total_ratings ?? 0),
+            ]
+        ]);
     }
 
     /**
-     * Start the calculation logic
+     * Calculate and persist the average rating for an entity.
+     * 
+     * P2 #7: System ratings are weighted separately to prevent admin manipulation.
+     * Formula: 90% user average + 10% system average (if both exist)
+     * If only one type exists, that type is used at 100%.
      */
-    private function updateEntityRating($type, $id)
+    private function updateEntityRating(string $type, int $id): void
     {
-        // Calculate new average
-        // CodeIgniter 4 Model doesn't have direct avg() method on builder easily without getting result first or using selectAvg
-        $builder = $this->ratingModel->builder();
-        $builder->selectAvg('rating');
-        $builder->where('ratee_type', $type);
-        $builder->where('ratee_id', $id);
-        $query = $builder->get();
-        $row = $query->getRow();
-        
-        $average = $row->rating ?? 0;
-        
-        // Round to 1 decimal place
-        $average = round($average, 1);
+        $db = \Config\Database::connect();
+
+        // User ratings (driver + customer raters)
+        $userStats = $db->query(
+            "SELECT AVG(rating) as avg_rating, COUNT(*) as cnt
+             FROM ratings
+             WHERE ratee_type = ? AND ratee_id = ? AND rater_type != 'system'",
+            [$type, $id]
+        )->getRow();
+
+        // System ratings
+        $sysStats = $db->query(
+            "SELECT AVG(rating) as avg_rating, COUNT(*) as cnt
+             FROM ratings
+             WHERE ratee_type = ? AND ratee_id = ? AND rater_type = 'system'",
+            [$type, $id]
+        )->getRow();
+
+        $userAvg = (float) ($userStats->avg_rating ?? 0);
+        $userCnt = (int) ($userStats->cnt ?? 0);
+        $sysAvg  = (float) ($sysStats->avg_rating ?? 0);
+        $sysCnt  = (int) ($sysStats->cnt ?? 0);
+
+        // Weighted blend: prioritize user ratings
+        if ($userCnt > 0 && $sysCnt > 0) {
+            $average = round(($userAvg * 0.9) + ($sysAvg * 0.1), 1);
+        } elseif ($userCnt > 0) {
+            $average = round($userAvg, 1);
+        } elseif ($sysCnt > 0) {
+            $average = round($sysAvg, 1);
+        } else {
+            $average = 0.0;
+        }
 
         // Update the entity table
         if ($type === 'driver') {

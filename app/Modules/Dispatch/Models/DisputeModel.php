@@ -24,7 +24,8 @@ class DisputeModel extends Model
         'attachment',
         'status',
         'resolution',
-        'resolved_by'
+        'resolved_by',
+        'resolved_at'
     ];
 
     // Dates

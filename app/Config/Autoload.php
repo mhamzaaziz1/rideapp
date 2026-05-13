@@ -82,7 +82,9 @@ class Autoload extends AutoloadConfig
      *
      * @var list<string>
      */
-    public $files = [];
+    public $files = [
+        APPPATH . 'Modules/IAM/Helpers/permission_helper.php',
+    ];
 
     /**
      * -------------------------------------------------------------------

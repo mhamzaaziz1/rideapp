@@ -16,11 +16,26 @@ class AuthController extends ResourceController
         $this->authService = new AuthService();
     }
 
+    /**
+     * Show login page (web)
+     */
     public function index()
     {
+        // If already logged in via session, redirect to dashboard
+        if (session('user_id')) {
+            return redirect()->to('/dispatch');
+        }
+        
+        $this->response->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+        $this->response->setHeader('Cache-Control', 'post-check=0, pre-check=0', false);
+        $this->response->setHeader('Pragma', 'no-cache');
+        
         return view('Modules\IAM\Views\login');
     }
 
+    /**
+     * API: Register
+     */
     public function register()
     {
         $data = $this->request->getJSON(true);
@@ -39,6 +54,9 @@ class AuthController extends ResourceController
         }
     }
 
+    /**
+     * API: Login (JSON) — returns JWT token + sets session
+     */
     public function login()
     {
         // Check database connection first
@@ -89,8 +107,39 @@ class AuthController extends ResourceController
         }
     }
 
+    /**
+     * Web: Form-based login (POST from login form)
+     */
+    public function attemptLogin()
+    {
+        $email    = $this->request->getPost('email');
+        $password = $this->request->getPost('password');
+
+        // If submitted via AJAX/JSON (login page JS), delegate to API login
+        if ($this->request->isAJAX() || $this->request->getHeaderLine('Content-Type') === 'application/json') {
+            return $this->login();
+        }
+
+        if (empty($email) || empty($password)) {
+            return redirect()->to('/login')->with('error', 'Email and password are required.');
+        }
+
+        try {
+            $user = $this->authService->webLogin($email, $password);
+            return redirect()->to('/dispatch')->with('success', 'Welcome back, ' . $user->first_name . '!');
+        } catch (Exception $e) {
+            return redirect()->to('/login')->with('error', $e->getMessage());
+        }
+    }
+
+    /**
+     * Logout — destroy session and redirect
+     */
     public function logout()
     {
+        $this->authService->logout();
+
+        // Clear JWT from client-side via a simple page
         return view('Modules\IAM\Views\logout');
     }
 }

@@ -56,15 +56,39 @@ class SettingController extends BaseController
             }
         }
 
+        // Get SMS status info for the notifications tab
+        $smsStatus = null;
+        $smsStats = null;
+        if ($tab == 'notifications') {
+            try {
+                $smsService = new \App\Libraries\SmsService();
+                $smsStatus = $smsService->getStatus();
+
+                // Get SMS message stats
+                $db = \Config\Database::connect();
+                if ($db->tableExists('sms_messages')) {
+                    $smsStats = [
+                        'total_sent'     => $db->table('sms_messages')->where('direction', 'outbound')->where('status', 'sent')->countAllResults(),
+                        'total_failed'   => $db->table('sms_messages')->where('direction', 'outbound')->where('status', 'failed')->countAllResults(),
+                        'total_received' => $db->table('sms_messages')->where('direction', 'inbound')->countAllResults(),
+                        'today_sent'     => $db->table('sms_messages')->where('direction', 'outbound')->where('status', 'sent')->where('created_at >=', date('Y-m-d 00:00:00'))->countAllResults(),
+                    ];
+                }
+            } catch (\Exception $e) {
+                log_message('error', '[Settings] Failed to get SMS status: ' . $e->getMessage());
+            }
+        }
+
         $data = [
-            'title' => 'Settings',
             'title' => 'Settings',
             'tab' => $tab,
             'settings' => $settings,
             'staff' => $staff,
             'roles' => $roles,
             'permissions' => $permissions,
-            'rolePermissions' => $rolePermissions
+            'rolePermissions' => $rolePermissions,
+            'smsStatus' => $smsStatus,
+            'smsStats' => $smsStats,
         ];
 
         return view('Modules\Setting\Views\index', $data);
@@ -96,6 +120,34 @@ class SettingController extends BaseController
                 'company_phone', 'company_vat', 'map_provider', 'google_maps_api_key'
             ];
             
+            foreach ($fields as $field) {
+                if ($this->request->getPost($field) !== null) {
+                    $settings[$field] = $this->request->getPost($field);
+                }
+            }
+        } elseif ($tab == 'notifications') {
+            $fields = [
+                // Pusher
+                'pusher_app_id', 'pusher_key', 'pusher_secret', 'pusher_cluster',
+                // SMS Provider Selection
+                'sms_provider',
+                // Twilio
+                'twilio_sid', 'twilio_token', 'twilio_number',
+                // Telnyx
+                'telnyx_api_key', 'telnyx_number', 'telnyx_messaging_profile_id', 'telnyx_public_key',
+            ];
+
+            foreach ($fields as $field) {
+                if ($this->request->getPost($field) !== null) {
+                    $settings[$field] = $this->request->getPost($field);
+                }
+            }
+        } elseif ($tab == 'templates') {
+            $fields = [
+                'tpl_trip_created', 'tpl_driver_arrived', 'tpl_trip_completed',
+                'tpl_driver_offer', 'tpl_otp',
+            ];
+
             foreach ($fields as $field) {
                 if ($this->request->getPost($field) !== null) {
                     $settings[$field] = $this->request->getPost($field);
@@ -147,5 +199,43 @@ class SettingController extends BaseController
         }
 
         return redirect()->to(base_url('settings?tab=general'))->with('success', 'Application cache cleared successfully.');
+    }
+
+    /**
+     * Send a test SMS via the configured provider (AJAX endpoint)
+     */
+    public function testSms()
+    {
+        $json = $this->request->getJSON(true);
+        $phone = $json['phone'] ?? '';
+
+        if (empty($phone)) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Phone number is required.']);
+        }
+
+        try {
+            $smsService = new \App\Libraries\SmsService();
+
+            if (!$smsService->isConfigured()) {
+                $status = $smsService->getStatus();
+                return $this->response->setJSON([
+                    'success' => false,
+                    'message' => $status['details'],
+                ]);
+            }
+
+            $result = $smsService->sendTest($phone);
+
+            return $this->response->setJSON([
+                'success' => $result['success'],
+                'message' => $result['success']
+                    ? 'Test SMS sent successfully via ' . ucfirst($smsService->getProvider()) . '! Check your phone.'
+                    : 'Failed: ' . ($result['error'] ?? 'Unknown error'),
+                'provider' => $smsService->getProvider(),
+            ]);
+        } catch (\Exception $e) {
+            log_message('error', '[TestSMS] ' . $e->getMessage());
+            return $this->response->setJSON(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
+        }
     }
 }

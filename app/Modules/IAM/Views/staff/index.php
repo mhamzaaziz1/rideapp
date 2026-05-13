@@ -7,10 +7,31 @@
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2rem;">
         <div>
             <h1 class="h3" style="margin:0;">Staff Management</h1>
-            <div style="color:var(--text-secondary); font-size:0.9rem;">Manage employees and access roles</div>
+            <div style="color:var(--text-secondary); font-size:0.9rem;">Manage employees, roles, and permissions</div>
         </div>
-        <a href="<?= base_url('staff/new') ?>" class="btn btn-primary"><i data-lucide="plus" width="16" style="margin-right:6px"></i> Add Staff</a>
+        <div style="display:flex; gap:0.75rem;">
+            <?php if(can('iam.roles.view')): ?>
+            <a href="<?= base_url('roles') ?>" class="btn" style="background:var(--bg-surface); border:1px solid var(--border-color); color:var(--text-primary); display:inline-flex; align-items:center; gap:6px; padding:0.5rem 1rem; border-radius:var(--radius-sm); text-decoration:none; font-size:0.875rem;">
+                <i data-lucide="shield" width="16"></i> Roles
+            </a>
+            <?php endif; ?>
+            <?php if(can('iam.staff.create')): ?>
+            <a href="<?= base_url('staff/new') ?>" class="btn btn-primary"><i data-lucide="plus" width="16" style="margin-right:6px"></i> Add Staff</a>
+            <?php endif; ?>
+        </div>
     </div>
+
+    <!-- Flash Messages -->
+    <?php if(session()->getFlashdata('success')): ?>
+    <div style="background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.3); color:#22c55e; padding:0.75rem 1rem; border-radius:var(--radius-sm); margin-bottom:1.5rem; display:flex; align-items:center; gap:8px;">
+        <i data-lucide="check-circle" width="16"></i> <?= session()->getFlashdata('success') ?>
+    </div>
+    <?php endif; ?>
+    <?php if(session()->getFlashdata('error')): ?>
+    <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; padding:0.75rem 1rem; border-radius:var(--radius-sm); margin-bottom:1.5rem; display:flex; align-items:center; gap:8px;">
+        <i data-lucide="alert-circle" width="16"></i> <?= session()->getFlashdata('error') ?>
+    </div>
+    <?php endif; ?>
 
     <!-- Staff List -->
     <div class="card" style="overflow:hidden;">
@@ -54,7 +75,23 @@
                         <?= date('M d, Y', strtotime($u->created_at)) ?>
                     </td>
                     <td style="text-align:right; padding:1rem;">
-                        <a href="<?= base_url('staff/edit/'.$u->id) ?>" class="btn-icon-sm" style="display:inline-flex;"><i data-lucide="edit-2" width="14"></i></a>
+                        <div style="display:inline-flex; gap:4px;">
+                            <?php if(can('iam.permissions.assign')): ?>
+                            <a href="<?= base_url('staff/permissions/'.$u->id) ?>" class="btn-icon-sm" style="display:inline-flex;" title="Manage Permissions">
+                                <i data-lucide="key-round" width="14"></i>
+                            </a>
+                            <?php endif; ?>
+                            <?php if(can('iam.staff.edit')): ?>
+                            <a href="<?= base_url('staff/edit/'.$u->id) ?>" class="btn-icon-sm" style="display:inline-flex;" title="Edit Staff">
+                                <i data-lucide="edit-2" width="14"></i>
+                            </a>
+                            <?php endif; ?>
+                            <?php if(can('iam.staff.delete')): ?>
+                            <a href="<?= base_url('staff/delete/'.$u->id) ?>" class="btn-icon-sm" style="display:inline-flex; color:var(--danger);" title="Delete" onclick="return confirm('Delete this staff member?')">
+                                <i data-lucide="trash-2" width="14"></i>
+                            </a>
+                            <?php endif; ?>
+                        </div>
                     </td>
                 </tr>
                 <?php endforeach; ?>
