@@ -216,122 +216,32 @@ class SmsWebhookController extends BaseController
 
     /**
      * Process inbound SMS commands and return a reply message (or null)
-     *
-     * @param string $from Sender phone number
-     * @param string $body Message body
-     * @return string|null Reply message or null
      */
     protected function processCommand(string $from, string $body): ?string
     {
-        $command = strtoupper(trim($body));
-
-        // Only process known commands (ignore regular messages)
-        if (!in_array($command, ['ACCEPT', 'DECLINE', 'STATUS', 'HELP'])) {
-            return null;
-        }
-
         try {
             $db = \Config\Database::connect();
 
-            // Find the driver by phone number
-            $driver = $db->table('drivers')
-                ->where('phone', $from)
-                ->where('status', 'active')
-                ->get()
-                ->getRow();
-
-            if (!$driver) {
-                return "⚠️ Your phone number is not registered as an active driver.";
+            // Find the driver or customer by phone number
+            $driver = $db->table('drivers')->where('phone', $from)->where('status', 'active')->get()->getRow();
+            if ($driver) {
+                $tripService = new \App\Modules\Support\Libraries\TripManipulationService();
+                return $tripService->process($driver->id, 'driver', $body);
             }
 
-            return match ($command) {
-                'ACCEPT'  => $this->handleAccept($db, $driver),
-                'DECLINE' => $this->handleDecline($db, $driver),
-                'STATUS'  => $this->handleStatus($db, $driver),
-                'HELP'    => "📱 Available commands:\nACCEPT — Accept your latest trip\nDECLINE — Decline your latest trip\nSTATUS — View your current trip\nHELP — Show this help",
-                default   => null,
-            };
+            $customer = $db->table('customers')->where('phone', $from)->get()->getRow();
+            if ($customer) {
+                $tripService = new \App\Modules\Support\Libraries\TripManipulationService();
+                return $tripService->process($customer->id, 'customer', $body);
+            }
+
+            // Number is unknown, handle via onboarding service
+            $onboardingService = new \App\Modules\Support\Libraries\SmsOnboardingService();
+            return $onboardingService->process($from, $body);
+
         } catch (\Exception $e) {
             log_message('error', "[SMS] Command processing error: " . $e->getMessage());
             return "⚠️ System error. Please try again or contact dispatch.";
         }
-    }
-
-    /**
-     * Handle ACCEPT command — accept the latest pending trip
-     */
-    protected function handleAccept(object $db, object $driver): string
-    {
-        $trip = $db->table('trips')
-            ->where('driver_id', $driver->id)
-            ->where('status', 'pending')
-            ->orderBy('created_at', 'DESC')
-            ->get()
-            ->getRow();
-
-        if (!$trip) {
-            return "ℹ️ No pending trips to accept. You're all clear!";
-        }
-
-        $db->table('trips')
-            ->where('id', $trip->id)
-            ->update(['status' => 'active']);
-
-        log_message('info', "[SMS] Driver #{$driver->id} ({$driver->first_name}) accepted trip #{$trip->trip_number} via SMS");
-
-        return "✅ Trip #{$trip->trip_number} accepted! Navigate to: {$trip->pickup_address}";
-    }
-
-    /**
-     * Handle DECLINE command — decline the latest pending trip
-     */
-    protected function handleDecline(object $db, object $driver): string
-    {
-        $trip = $db->table('trips')
-            ->where('driver_id', $driver->id)
-            ->where('status', 'pending')
-            ->orderBy('created_at', 'DESC')
-            ->get()
-            ->getRow();
-
-        if (!$trip) {
-            return "ℹ️ No pending trips to decline.";
-        }
-
-        // Unassign driver and return to queue
-        $db->table('trips')
-            ->where('id', $trip->id)
-            ->update([
-                'driver_id' => null,
-                'status'    => 'pending',
-                'driver_earnings'    => null,
-                'commission_amount'  => null,
-            ]);
-
-        log_message('info', "[SMS] Driver #{$driver->id} ({$driver->first_name}) declined trip #{$trip->trip_number} via SMS");
-
-        return "❌ Trip #{$trip->trip_number} declined. It has been returned to the dispatch queue.";
-    }
-
-    /**
-     * Handle STATUS command — report current trip status
-     */
-    protected function handleStatus(object $db, object $driver): string
-    {
-        $trip = $db->table('trips')
-            ->whereIn('status', ['active', 'dispatching', 'pending'])
-            ->where('driver_id', $driver->id)
-            ->orderBy('created_at', 'DESC')
-            ->get()
-            ->getRow();
-
-        if (!$trip) {
-            return "ℹ️ No active trips. You're currently available.";
-        }
-
-        $status = ucfirst($trip->status);
-        $fare = number_format((float)($trip->fare_amount ?? 0), 2);
-
-        return "📋 Trip #{$trip->trip_number}\nStatus: {$status}\nPickup: {$trip->pickup_address}\nDropoff: {$trip->dropoff_address}\nFare: \${$fare}";
     }
 }

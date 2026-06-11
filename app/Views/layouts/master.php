@@ -104,6 +104,11 @@
                         <i data-lucide="alert-triangle" class="nav-icon"></i> Disputes
                     </a>
                     <?php endif; ?>
+                    <?php if(can('support.chat.view')): ?>
+                    <a href="<?= base_url('admin/support') ?>" class="nav-item <?= uri_string() == 'admin/support' ? 'active' : '' ?>">
+                        <i data-lucide="help-circle" class="nav-icon"></i> Support
+                    </a>
+                    <?php endif; ?>
                 </nav>
             </div>
 
@@ -245,5 +250,6 @@
 
     </script>
     <?= $this->renderSection('scripts') ?>
+    <?= view('App\Modules\Support\Views\chat_widget') ?>
 </body>
 </html>

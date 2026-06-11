@@ -8,7 +8,7 @@ use CodeIgniter\Router\RouteCollection;
 $routes->get('/', 'Home::index');
 
 // Load Module Routes
-$modules = ['IAM', 'Dispatch', 'Fleet', 'Customer', 'Billing', 'Setting', 'CallCenter'];
+$modules = ['IAM', 'Dispatch', 'Fleet', 'Customer', 'Billing', 'Setting', 'CallCenter', 'Support'];
 foreach ($modules as $module) {
     if (file_exists(APPPATH . 'Modules/' . $module . '/Config/Routes.php')) {
         require APPPATH . 'Modules/' . $module . '/Config/Routes.php';

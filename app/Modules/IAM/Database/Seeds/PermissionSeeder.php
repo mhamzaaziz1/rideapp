@@ -169,6 +169,21 @@ class PermissionSeeder extends Seeder
                     'revoke' => 'Revoke permissions from roles/users',
                 ],
             ],
+
+            // ---- Support Module ----
+            'Support' => [
+                'chat' => [
+                    'view'   => 'View support chat dashboard',
+                    'reply'  => 'Reply to support chats',
+                    'delete' => 'Delete chat history',
+                ],
+                'faq' => [
+                    'view'   => 'View FAQ entries',
+                    'create' => 'Create FAQ entries',
+                    'edit'   => 'Edit FAQ entries',
+                    'delete' => 'Delete FAQ entries',
+                ],
+            ],
         ];
 
         // =========================================================
@@ -238,6 +253,7 @@ class PermissionSeeder extends Seeder
                 'customer.customers.view', 'customer.customers.create', 'customer.customers.profile',
                 'customer.addresses.view', 'customer.addresses.create',
                 'callcenter.call_logs.view', 'callcenter.call_logs.create',
+                'support.chat.view',
             ];
             foreach ($dispatcherPerms as $permName) {
                 $perm = $db->table('permissions')->where('name', $permName)->get()->getRow();

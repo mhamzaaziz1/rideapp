@@ -35,6 +35,7 @@ class Filters extends BaseFilters
         'pagecache'     => PageCache::class,
         'performance'   => PerformanceMetrics::class,
         // IAM Filters
+        'auth'          => \Modules\IAM\Filters\AuthSessionFilter::class,
         'auth_session'  => \Modules\IAM\Filters\AuthSessionFilter::class,
         'permission'    => \Modules\IAM\Filters\PermissionFilter::class,
         'jwt'           => \Modules\IAM\Filters\JwtFilter::class,
