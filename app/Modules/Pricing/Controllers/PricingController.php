@@ -52,7 +52,7 @@ class PricingController extends BaseController
             'zones' => $zones,
             'activeTab' => $activeTab
         ];
-        return view('Modules\Pricing\Views\pricing\index', $data);
+        return view('App\Modules\Pricing\Views\pricing\index', $data);
     }
 
     public function update($id)

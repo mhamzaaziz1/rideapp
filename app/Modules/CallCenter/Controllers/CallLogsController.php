@@ -43,12 +43,12 @@ class CallLogsController extends BaseController
             ]
         ];
 
-        return view('Modules\CallCenter\Views\index', $data);
+        return view('App\Modules\CallCenter\Views\index', $data);
     }
 
     public function create()
     {
-        return view('Modules\CallCenter\Views\form', ['title' => 'Log New Call']);
+        return view('App\Modules\CallCenter\Views\form', ['title' => 'Log New Call']);
     }
 
     public function store()
@@ -80,7 +80,7 @@ class CallLogsController extends BaseController
         if (!$call) {
             return redirect()->back()->with('error', 'Call log not found.');
         }
-        return view('Modules\CallCenter\Views\form', ['call' => $call, 'title' => 'Edit Call Log']);
+        return view('App\Modules\CallCenter\Views\form', ['call' => $call, 'title' => 'Edit Call Log']);
     }
 
     public function update($id)

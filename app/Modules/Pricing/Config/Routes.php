@@ -6,7 +6,7 @@ use Config\Services;
 
 $routes = Services::routes();
 
-$routes->group('pricing', ['namespace' => 'Modules\Pricing\Controllers'], function ($routes) {
+$routes->group('pricing', ['namespace' => 'App\Modules\Pricing\Controllers'], function ($routes) {
     $routes->get('/', 'PricingController::index');
     $routes->post('update/(:num)', 'PricingController::update/$1');
     $routes->post('addPeakHour', 'PricingController::addPeakHour');

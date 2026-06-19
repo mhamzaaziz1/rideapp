@@ -6,6 +6,6 @@ class Home extends BaseController
 {
     public function index(): string
     {
-        return view('Modules\IAM\Views\login');
+        return view('App\Modules\IAM\Views\login');
     }
 }

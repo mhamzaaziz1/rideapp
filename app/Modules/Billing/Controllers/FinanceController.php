@@ -245,7 +245,7 @@ class FinanceController extends BaseController
             'recent_trips'        => $recentTrips,
         ];
 
-        return view('Modules\Billing\Views\finance\index', $data);
+        return view('App\Modules\Billing\Views\finance\index', $data);
     }
 
     /**

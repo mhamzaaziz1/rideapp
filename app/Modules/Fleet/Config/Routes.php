@@ -1,6 +1,6 @@
 <?php
 
-$routes->group('drivers', ['namespace' => 'Modules\Fleet\Controllers'], function($routes) {
+$routes->group('drivers', ['namespace' => 'App\Modules\Fleet\Controllers'], function($routes) {
     $routes->get('/', 'DriversController::index');
     $routes->get('new', 'DriversController::new');
     $routes->post('create', 'DriversController::create');

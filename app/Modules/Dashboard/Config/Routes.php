@@ -6,7 +6,7 @@ use Config\Services;
 
 $routes = Services::routes();
 
-$routes->group('dashboard', ['namespace' => 'Modules\Dashboard\Controllers'], function ($routes) {
+$routes->group('dashboard', ['namespace' => 'App\Modules\Dashboard\Controllers'], function ($routes) {
     $routes->get('/', 'DashboardController::index');
 });
 

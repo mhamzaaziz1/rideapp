@@ -20,7 +20,7 @@ class TwilioVoiceController extends BaseController
             return $this->response->setContentType('text/xml')->setBody($response->asXML());
         }
 
-        $logicService = new \Modules\Dispatch\Services\VoiceLogicService();
+        $logicService = new \App\Modules\Dispatch\Services\VoiceLogicService();
         $twiMlContent = $logicService->processInboundCall($from);
 
         return $this->response->setContentType('text/xml')->setBody($twiMlContent);
@@ -34,7 +34,7 @@ class TwilioVoiceController extends BaseController
         $from   = $this->request->getPost('From');
         $digits = $this->request->getPost('Digits'); // 0, 1, 2, or 3
         
-        $logicService = new \Modules\Dispatch\Services\VoiceLogicService();
+        $logicService = new \App\Modules\Dispatch\Services\VoiceLogicService();
         $twiMlContent = $logicService->processDriverInput($from, $digits);
 
         return $this->response->setContentType('text/xml')->setBody($twiMlContent);
@@ -48,7 +48,7 @@ class TwilioVoiceController extends BaseController
         $from   = $this->request->getPost('From');
         $digits = $this->request->getPost('Digits'); // 0 or 1
         
-        $logicService = new \Modules\Dispatch\Services\VoiceLogicService();
+        $logicService = new \App\Modules\Dispatch\Services\VoiceLogicService();
         $twiMlContent = $logicService->processCustomerInput($from, $digits);
 
         return $this->response->setContentType('text/xml')->setBody($twiMlContent);

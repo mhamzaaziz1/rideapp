@@ -37,7 +37,7 @@ class BookingController extends BaseController
                 'van'      => 'Van'
             ]
         ];
-        return view('Modules\Customer\Views\booking\new', $data);
+        return view('App\Modules\Customer\Views\booking\new', $data);
     }
 
     /**
@@ -142,7 +142,7 @@ class BookingController extends BaseController
 
         $trips = $query->orderBy('created_at', 'DESC')->findAll();
         
-        return view('Modules\Customer\Views\booking\history', [
+        return view('App\Modules\Customer\Views\booking\history', [
             'trips' => $trips,
             'title' => 'My Trips',
             'filters' => [

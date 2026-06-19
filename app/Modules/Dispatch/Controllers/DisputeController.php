@@ -19,7 +19,7 @@ class DisputeController extends BaseController
     {
         $data['title'] = 'Disputes Management';
         $data['disputes'] = $this->disputeModel->getDisputesWithDetails();
-        return view('Modules\Dispatch\Views\disputes\index', $data);
+        return view('App\Modules\Dispatch\Views\disputes\index', $data);
     }
     
     public function view($id)
@@ -39,11 +39,11 @@ class DisputeController extends BaseController
             return redirect()->to('/admin/disputes')->with('error', 'Dispute not found.');
         }
 
-        $commentModel = new \Modules\Dispatch\Models\DisputeCommentModel();
+        $commentModel = new \App\Modules\Dispatch\Models\DisputeCommentModel();
         $data['comments'] = $commentModel->getCommentsWithUser($id);
 
         $data['title'] = 'View Dispute - ' . $data['dispute']->title;
-        return view('Modules\Dispatch\Views\disputes\view', $data);
+        return view('App\Modules\Dispatch\Views\disputes\view', $data);
     }
 
     public function addComment($id)
@@ -54,7 +54,7 @@ class DisputeController extends BaseController
             return redirect()->back()->with('error', 'Comment cannot be empty.');
         }
 
-        $commentModel = new \Modules\Dispatch\Models\DisputeCommentModel();
+        $commentModel = new \App\Modules\Dispatch\Models\DisputeCommentModel();
         $commentModel->insert([
             'dispute_id' => $id,
             'user_id' => session()->get('user_id'),
@@ -115,7 +115,7 @@ class DisputeController extends BaseController
         }
 
         $data['title'] = 'Edit Dispute - ' . $data['dispute']->title;
-        return view('Modules\Dispatch\Views\disputes\edit', $data);
+        return view('App\Modules\Dispatch\Views\disputes\edit', $data);
     }
 
     public function updateDetails($id)
@@ -261,9 +261,9 @@ class DisputeController extends BaseController
         $db->transBegin();
 
         try {
-            $walletTxModel = new \Modules\Billing\Models\WalletTransactionModel();
-            $customerModel = new \Modules\Customer\Models\CustomerModel();
-            $driverModel = new \Modules\Fleet\Models\DriverModel();
+            $walletTxModel = new \App\Modules\Billing\Models\WalletTransactionModel();
+            $customerModel = new \App\Modules\Customer\Models\CustomerModel();
+            $driverModel = new \App\Modules\Fleet\Models\DriverModel();
 
             if ($settleTo == 'customer' && !empty($dispute->customer_id)) {
                 $walletTxModel->insert([
@@ -345,7 +345,7 @@ class DisputeController extends BaseController
             WalletService::syncBalance('customer', (int)$dispute->customer_id);
         }
         if (!empty($dispute->driver_id) && in_array($settleTo, ['driver', 'transfer_to_customer', 'transfer_to_driver'])) {
-            $driver = (new \Modules\Fleet\Models\DriverModel())->find($dispute->driver_id);
+            $driver = (new \App\Modules\Fleet\Models\DriverModel())->find($dispute->driver_id);
             WalletService::syncBalance('driver', (int)$dispute->driver_id, (float)($driver->commission_rate ?? 25.00));
         }
 

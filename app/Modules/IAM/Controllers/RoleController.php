@@ -15,7 +15,7 @@ class RoleController extends BaseController
 
     public function __construct()
     {
-        helper('Modules\IAM\Helpers\permission');
+        helper('App\Modules\IAM\Helpers\permission');
         $this->roleModel   = new RoleModel();
         $this->permModel   = new PermissionModel();
         $this->permService = new PermissionService();
@@ -30,7 +30,7 @@ class RoleController extends BaseController
             'roles' => $this->roleModel->getAllWithCounts(),
             'title' => 'Roles & Permissions',
         ];
-        return view('Modules\IAM\Views\roles\index', $data);
+        return view('App\Modules\IAM\Views\roles\index', $data);
     }
 
     /**
@@ -44,7 +44,7 @@ class RoleController extends BaseController
             'assignedPermIds'   => [],
             'title'             => 'Create New Role',
         ];
-        return view('Modules\IAM\Views\roles\form', $data);
+        return view('App\Modules\IAM\Views\roles\form', $data);
     }
 
     /**
@@ -106,7 +106,7 @@ class RoleController extends BaseController
             'assignedPermIds'   => $this->permModel->getIdsForRole($id),
             'title'             => "Edit Role: {$role->name}",
         ];
-        return view('Modules\IAM\Views\roles\form', $data);
+        return view('App\Modules\IAM\Views\roles\form', $data);
     }
 
     /**
@@ -220,7 +220,7 @@ class RoleController extends BaseController
             'users'       => $users,
             'title'       => "Role: {$role->name}",
         ];
-        return view('Modules\IAM\Views\roles\view', $data);
+        return view('App\Modules\IAM\Views\roles\view', $data);
     }
 
     /**

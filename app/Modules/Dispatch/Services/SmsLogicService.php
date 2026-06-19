@@ -167,7 +167,7 @@ class SmsLogicService
                 'dropoff_address' => 'TBD via Chat or App',
                 'vehicle_type' => 'Standard',
             ];
-            $trip = new \Modules\Dispatch\Entities\Trip($tripData);
+            $trip = new \App\Modules\Dispatch\Entities\Trip($tripData);
             $trip->generateTripNumber();
             $this->tripModel->insert($trip);
             

@@ -21,7 +21,7 @@ class TwilioWebhookController extends BaseController
         }
 
         // Handle State Transitions and Routing
-        $logicService = new \Modules\Dispatch\Services\SmsLogicService();
+        $logicService = new \App\Modules\Dispatch\Services\SmsLogicService();
         $replyMessage = $logicService->processIncomingSms($from, $body);
 
         // If the logic service returns an empty string (e.g. Proxy msg), don't send TwiML reply

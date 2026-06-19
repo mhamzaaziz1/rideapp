@@ -114,6 +114,6 @@ class DashboardController extends BaseController
             'title' => 'Dashboard Overview'
         ];
 
-        return view('Modules\Dashboard\Views\dashboard\index', $data);
+        return view('App\Modules\Dashboard\Views\dashboard\index', $data);
     }
 }

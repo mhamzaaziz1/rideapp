@@ -91,7 +91,7 @@ class SettingController extends BaseController
             'smsStats' => $smsStats,
         ];
 
-        return view('Modules\Setting\Views\index', $data);
+        return view('App\Modules\Setting\Views\index', $data);
     }
 
     public function update()

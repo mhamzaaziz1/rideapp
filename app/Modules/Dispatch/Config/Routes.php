@@ -6,7 +6,7 @@ use Config\Services;
 
 $routes = Services::routes();
 
-$routes->group('dispatch', ['namespace' => 'Modules\Dispatch\Controllers'], function ($routes) {
+$routes->group('dispatch', ['namespace' => 'App\Modules\Dispatch\Controllers'], function ($routes) {
     $routes->get('/', 'DispatchController::index');
     $routes->post('trips/create', 'TripController::create'); // Keep existing API-like route
     
@@ -29,7 +29,7 @@ $routes->group('dispatch', ['namespace' => 'Modules\Dispatch\Controllers'], func
     $routes->get('ratings/list', 'RatingController::list');
 });
 
-$routes->group('admin/disputes', ['namespace' => 'Modules\Dispatch\Controllers'], function ($routes) {
+$routes->group('admin/disputes', ['namespace' => 'App\Modules\Dispatch\Controllers'], function ($routes) {
     $routes->get('/', 'DisputeController::index');
     $routes->get('view/(:num)', 'DisputeController::view/$1');
     $routes->post('update/(:num)', 'DisputeController::updateStatus/$1');
@@ -40,18 +40,18 @@ $routes->group('admin/disputes', ['namespace' => 'Modules\Dispatch\Controllers']
     $routes->get('delete/(:num)', 'DisputeController::delete/$1');
 });
 
-$routes->group('admin/communications', ['namespace' => 'Modules\Dispatch\Controllers'], function ($routes) {
+$routes->group('admin/communications', ['namespace' => 'App\Modules\Dispatch\Controllers'], function ($routes) {
     $routes->get('/', 'CommunicationController::index');
 });
 
-$routes->group('api/disputes', ['namespace' => 'Modules\Dispatch\Controllers'], function ($routes) {
+$routes->group('api/disputes', ['namespace' => 'App\Modules\Dispatch\Controllers'], function ($routes) {
     $routes->post('create', 'DisputeController::apiCreate');
 });
 
 // Expose /trips directly as requested
-$routes->get('trips', 'TripController::index', ['namespace' => 'Modules\Dispatch\Controllers']);
+$routes->get('trips', 'TripController::index', ['namespace' => 'App\Modules\Dispatch\Controllers']);
 
-$routes->group('api/webhooks', ['namespace' => 'Modules\Dispatch\Controllers'], function ($routes) {
+$routes->group('api/webhooks', ['namespace' => 'App\Modules\Dispatch\Controllers'], function ($routes) {
     // SMS endpoints
     $routes->post('twilio/receive', 'TwilioWebhookController::receive');
     
@@ -62,7 +62,7 @@ $routes->group('api/webhooks', ['namespace' => 'Modules\Dispatch\Controllers'], 
 });
 
 // SMS Webhooks (inbound messages from providers)
-$routes->group('sms/webhook', ['namespace' => 'Modules\Dispatch\Controllers'], function ($routes) {
+$routes->group('sms/webhook', ['namespace' => 'App\Modules\Dispatch\Controllers'], function ($routes) {
     $routes->post('twilio', 'SmsWebhookController::twilio');
     $routes->post('telnyx', 'SmsWebhookController::telnyx');
 });

@@ -30,7 +30,7 @@ class AuthController extends ResourceController
         $this->response->setHeader('Cache-Control', 'post-check=0, pre-check=0', false);
         $this->response->setHeader('Pragma', 'no-cache');
         
-        return view('Modules\IAM\Views\login');
+        return view('App\Modules\IAM\Views\login');
     }
 
     /**
@@ -140,6 +140,6 @@ class AuthController extends ResourceController
         $this->authService->logout();
 
         // Clear JWT from client-side via a simple page
-        return view('Modules\IAM\Views\logout');
+        return view('App\Modules\IAM\Views\logout');
     }
 }

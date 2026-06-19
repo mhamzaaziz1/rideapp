@@ -265,7 +265,7 @@
                     </div>
                 <?php else: ?>
                     <?php foreach($trips_queue as $t): ?>
-                        <?= view('Modules\Dispatch\Views\trips\_card', ['trip' => $t, 'type' => 'queue']) ?>
+                        <?= view('App\Modules\Dispatch\Views\trips\_card', ['trip' => $t, 'type' => 'queue']) ?>
                     <?php endforeach; ?>
                 <?php endif; ?>
             </div>
@@ -277,20 +277,20 @@
                     </div>
                 <?php else: ?>
                     <?php foreach($trips_active as $t): ?>
-                         <?= view('Modules\Dispatch\Views\trips\_card', ['trip' => $t, 'type' => 'active']) ?>
+                         <?= view('App\Modules\Dispatch\Views\trips\_card', ['trip' => $t, 'type' => 'active']) ?>
                     <?php endforeach; ?>
                 <?php endif; ?>
             </div>
 
             <div id="tab-history" class="tab-pane <?= ($active_tab == 'history') ? 'active' : '' ?>">
                  <?php foreach($trips_history as $t): ?>
-                     <?= view('Modules\Dispatch\Views\trips\_card', ['trip' => $t, 'type' => 'history']) ?>
+                     <?= view('App\Modules\Dispatch\Views\trips\_card', ['trip' => $t, 'type' => 'history']) ?>
                  <?php endforeach; ?>
             </div>
 
             <div id="tab-all" class="tab-pane <?= ($active_tab == 'all') ? 'active' : '' ?>">
                  <?php foreach($trips_all as $t): ?>
-                     <?= view('Modules\Dispatch\Views\trips\_card', ['trip' => $t, 'type' => 'all']) ?>
+                     <?= view('App\Modules\Dispatch\Views\trips\_card', ['trip' => $t, 'type' => 'all']) ?>
                  <?php endforeach; ?>
             </div>
         </div>
@@ -469,7 +469,7 @@
     </div>
 </div>
 
-<?= view('Modules\\Dispatch\\Views\\trips\\_quick_dispatch_modal') ?>
+<?= view('App\Modules\\Dispatch\\Views\\trips\\_quick_dispatch_modal') ?>
 
 <script>
     function switchTab(tabId) {

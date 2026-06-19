@@ -147,7 +147,7 @@
             <select name="driver_id" class="form-select" required>
                 <option value="">Select driver...</option>
                 <?php
-                    $driverModel = new \Modules\Fleet\Models\DriverModel();
+                    $driverModel = new \App\Modules\Fleet\Models\DriverModel();
                     $drivers = $driverModel->where('deleted_at', null)->orderBy('first_name', 'ASC')->findAll();
                     foreach($drivers as $d):
                 ?>

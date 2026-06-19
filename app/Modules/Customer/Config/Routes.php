@@ -6,7 +6,7 @@ use Config\Services;
 
 $routes = Services::routes();
 
-$routes->group('customers', ['namespace' => 'Modules\Customer\Controllers'], function ($routes) {
+$routes->group('customers', ['namespace' => 'App\Modules\Customer\Controllers'], function ($routes) {
     $routes->get('/', 'CustomerController::index');
     $routes->get('create', 'CustomerController::new');
     $routes->get('new', 'CustomerController::new');
@@ -34,7 +34,7 @@ $routes->group('customers', ['namespace' => 'Modules\Customer\Controllers'], fun
 });
 
 // Customer Portal (Self-Service)
-$routes->group('customer', ['namespace' => 'Modules\Customer\Controllers'], function ($routes) {
+$routes->group('customer', ['namespace' => 'App\Modules\Customer\Controllers'], function ($routes) {
     $routes->get('book', 'BookingController::new');
     $routes->post('book', 'BookingController::create');
     $routes->post('estimate', 'BookingController::estimate');
@@ -42,4 +42,4 @@ $routes->group('customer', ['namespace' => 'Modules\Customer\Controllers'], func
 });
 
 // Explicit global get for robustness
-$routes->get('customers', 'CustomerController::index', ['namespace' => 'Modules\Customer\Controllers']);
+$routes->get('customers', 'CustomerController::index', ['namespace' => 'App\Modules\Customer\Controllers']);

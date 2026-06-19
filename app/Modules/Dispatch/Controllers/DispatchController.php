@@ -10,7 +10,7 @@ class DispatchController extends BaseController
 {
     public function index()
     {
-        $tripModel = new \Modules\Dispatch\Models\TripModel();
+        $tripModel = new \App\Modules\Dispatch\Models\TripModel();
         
         // Fetch trips that are NOT completed or cancelled with full details
         $activeTrips = $tripModel->select('
@@ -39,14 +39,14 @@ class DispatchController extends BaseController
             ->orderBy('trips.created_at', 'DESC')
             ->findAll();
 
-        $driverModel = new \Modules\Fleet\Models\DriverModel();
+        $driverModel = new \App\Modules\Fleet\Models\DriverModel();
         $drivers = $driverModel->where('status', 'active')->findAll();
 
-        $customerModel = new \Modules\Customer\Models\CustomerModel();
+        $customerModel = new \App\Modules\Customer\Models\CustomerModel();
         $customers = $customerModel->where('status', 'active')->findAll();
 
         // Fetch Actual Inbound Calls from CommunicationLogModel
-        $commLogModel = new \Modules\Dispatch\Models\CommunicationLogModel();
+        $commLogModel = new \App\Modules\Dispatch\Models\CommunicationLogModel();
         $recentCalls = $commLogModel->select('communication_logs.*, 
                 customers.first_name as c_first, customers.last_name as c_last,
                 drivers.first_name as d_first, drivers.last_name as d_last')
@@ -74,7 +74,7 @@ class DispatchController extends BaseController
             ];
         }
 
-        return view('Modules\Dispatch\Views\dashboard', [
+        return view('App\Modules\Dispatch\Views\dashboard', [
             'title' => 'Dispatch Console',
             'activeTrips' => $activeTrips,
             'drivers' => $drivers,

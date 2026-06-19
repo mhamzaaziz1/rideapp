@@ -32,16 +32,16 @@ class CustomerController extends BaseController
             'title' => 'Customer Management'
         ];
 
-        return view('Modules\Customer\Views\index', $data);
+        return view('App\Modules\Customer\Views\index', $data);
     }
 
     public function new()
     {
         $data = [
-            'customer' => new \Modules\Customer\Entities\Customer(),
+            'customer' => new \App\Modules\Customer\Entities\Customer(),
             'title' => 'Add New Customer'
         ];
-        return view('Modules\Customer\Views\form', $data);
+        return view('App\Modules\Customer\Views\form', $data);
     }
 
     public function create()
@@ -90,7 +90,7 @@ class CustomerController extends BaseController
             'customer' => $customer,
             'title' => 'Edit Customer'
         ];
-        return view('Modules\Customer\Views\form', $data);
+        return view('App\Modules\Customer\Views\form', $data);
     }
 
     public function update($id)
@@ -165,7 +165,7 @@ class CustomerController extends BaseController
         $toDate = $this->request->getVar('to_date');
 
         // Fetch Trips
-        $tripModel = new \Modules\Dispatch\Models\TripModel();
+        $tripModel = new \App\Modules\Dispatch\Models\TripModel();
         
         // Use builder to get driver names for history
         $builder = $tripModel->builder();
@@ -252,7 +252,7 @@ class CustomerController extends BaseController
             ]
         ];
 
-        return view('Modules\Customer\Views\profile', $data);
+        return view('App\Modules\Customer\Views\profile', $data);
     }
 
     public function addFund()
@@ -347,7 +347,7 @@ class CustomerController extends BaseController
 
         $walletBalance = WalletService::calculateCustomerBalance($id);
 
-        return view('Modules\Customer\Views\statement', [
+        return view('App\Modules\Customer\Views\statement', [
             'customer'      => $customer,
             'transactions'  => $transactions,
             'walletBalance' => $walletBalance,

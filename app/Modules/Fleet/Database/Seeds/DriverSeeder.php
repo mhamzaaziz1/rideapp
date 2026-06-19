@@ -79,7 +79,7 @@ class DriverSeeder extends Seeder
         ];
 
         foreach ($drivers as $driver) {
-            $model->save(new \Modules\Fleet\Entities\Driver($driver));
+            $model->save(new \App\Modules\Fleet\Entities\Driver($driver));
         }
     }
 }

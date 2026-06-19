@@ -41,7 +41,7 @@ class DriversController extends BaseController
 
         $data['title'] = 'Driver Management';
         
-        return view('Modules\Fleet\Views\drivers\index', $data);
+        return view('App\Modules\Fleet\Views\drivers\index', $data);
     }
 
     public function create()
@@ -86,7 +86,7 @@ class DriversController extends BaseController
             'title' => 'Edit Driver'
         ];
 
-        return view('Modules\Fleet\Views\drivers\form', $data);
+        return view('App\Modules\Fleet\Views\drivers\form', $data);
     }
 
     public function update($id)
@@ -170,7 +170,7 @@ class DriversController extends BaseController
         
         $trips = [];
         try {
-             $tripModel = new \Modules\Dispatch\Models\TripModel();
+             $tripModel = new \App\Modules\Dispatch\Models\TripModel();
              $tripQuery = $tripModel->where('driver_id', $id);
              
              if ($fromDate) $tripQuery->where('created_at >=', $fromDate . ' 00:00:00');
@@ -188,7 +188,7 @@ class DriversController extends BaseController
                                      ->findAll();
 
         // Fetch Bank Accounts
-        $bankModel = new \Modules\Fleet\Models\DriverBankModel();
+        $bankModel = new \App\Modules\Fleet\Models\DriverBankModel();
         $bankAccounts = $bankModel->where('driver_id', $id)->orderBy('is_default', 'DESC')->findAll();
 
         // Calculate Stats
@@ -260,7 +260,7 @@ class DriversController extends BaseController
             ]
         ];
 
-        return view('Modules\Fleet\Views\drivers\profile', $data);
+        return view('App\Modules\Fleet\Views\drivers\profile', $data);
     }
 
     public function addFund()
@@ -373,7 +373,7 @@ class DriversController extends BaseController
             return redirect()->to('/drivers')->with('error', 'Driver not found.');
         }
 
-        return view('Modules\Fleet\Views\drivers\cheque', [
+        return view('App\Modules\Fleet\Views\drivers\cheque', [
             'driver' => $driver,
             'tx'     => $tx,
         ]);
@@ -396,12 +396,12 @@ class DriversController extends BaseController
                                 ->findAll();
 
         $commissionRate    = $driver->commission_rate ?? 25.00;
-        $walletBalance     = \Modules\Billing\Services\WalletService::calculateDriverBalance(
+        $walletBalance     = \App\Modules\Billing\Services\WalletService::calculateDriverBalance(
             (int)$driverId,
             (float)$commissionRate
         );
 
-        return view('Modules\Fleet\Views\drivers\statement', [
+        return view('App\Modules\Fleet\Views\drivers\statement', [
             'driver'        => $driver,
             'transactions'  => $transactions,
             'walletBalance' => $walletBalance,
@@ -489,7 +489,7 @@ class DriversController extends BaseController
 
     public function addBank($driverId)
     {
-        $bankModel = new \Modules\Fleet\Models\DriverBankModel();
+        $bankModel = new \App\Modules\Fleet\Models\DriverBankModel();
         
         $data = [
             'driver_id'      => $driverId,
@@ -514,7 +514,7 @@ class DriversController extends BaseController
 
     public function setDefaultBank($id)
     {
-        $bankModel = new \Modules\Fleet\Models\DriverBankModel();
+        $bankModel = new \App\Modules\Fleet\Models\DriverBankModel();
         $account = $bankModel->find($id);
         
         if (!$account) {
@@ -530,7 +530,7 @@ class DriversController extends BaseController
 
     public function deleteBank($id)
     {
-        $bankModel = new \Modules\Fleet\Models\DriverBankModel();
+        $bankModel = new \App\Modules\Fleet\Models\DriverBankModel();
         if ($bankModel->delete($id)) {
             return redirect()->back()->with('success', 'Bank account deleted');
         }

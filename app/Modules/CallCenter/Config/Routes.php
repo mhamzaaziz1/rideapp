@@ -6,7 +6,7 @@ use Config\Services;
 
 $routes = Services::routes();
 
-$routes->group('call-logs', ['namespace' => 'Modules\CallCenter\Controllers'], function ($routes) {
+$routes->group('call-logs', ['namespace' => 'App\Modules\CallCenter\Controllers'], function ($routes) {
     $routes->get('/', 'CallLogsController::index');
     $routes->get('new', 'CallLogsController::create');
     $routes->post('create', 'CallLogsController::store');
@@ -16,4 +16,4 @@ $routes->group('call-logs', ['namespace' => 'Modules\CallCenter\Controllers'], f
 });
 
 // Global route exposure
-$routes->get('call-logs', 'CallLogsController::index', ['namespace' => 'Modules\CallCenter\Controllers']);
+$routes->get('call-logs', 'CallLogsController::index', ['namespace' => 'App\Modules\CallCenter\Controllers']);

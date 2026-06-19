@@ -37,6 +37,6 @@ class CommunicationController extends BaseController
             'testUsers'  => $testUsers
         ];
 
-        return view('Modules\Dispatch\Views\communications\index', $data);
+        return view('App\Modules\Dispatch\Views\communications\index', $data);
     }
 }

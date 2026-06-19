@@ -31,17 +31,17 @@ class StaffController extends BaseController
             'staff' => $builder->get()->getResult(),
             'title' => 'Staff Management'
         ];
-        return view('Modules\IAM\Views\staff\index', $data);
+        return view('App\Modules\IAM\Views\staff\index', $data);
     }
 
     public function new()
     {
         $data = [
-            'staff' => new \Modules\IAM\Entities\User(),
+            'staff' => new \App\Modules\IAM\Entities\User(),
             'roles' => $this->roleModel->findAll(),
             'title' => 'Add New Staff Member'
         ];
-        return view('Modules\IAM\Views\staff\form', $data);
+        return view('App\Modules\IAM\Views\staff\form', $data);
     }
 
     public function create()
@@ -103,7 +103,7 @@ class StaffController extends BaseController
             'roles' => $this->roleModel->findAll(),
             'title' => 'Edit Staff Member'
         ];
-        return view('Modules\IAM\Views\staff\form', $data);
+        return view('App\Modules\IAM\Views\staff\form', $data);
     }
 
     public function update($id)

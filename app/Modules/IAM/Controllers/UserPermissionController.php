@@ -22,7 +22,7 @@ class UserPermissionController extends BaseController
 
     public function __construct()
     {
-        helper('Modules\IAM\Helpers\permission');
+        helper('App\Modules\IAM\Helpers\permission');
         $this->userModel   = new UserModel();
         $this->permModel   = new PermissionModel();
         $this->permService = new PermissionService();
@@ -66,7 +66,7 @@ class UserPermissionController extends BaseController
             'title'           => "Permissions: {$user->first_name} {$user->last_name}",
         ];
 
-        return view('Modules\IAM\Views\permissions\user_manage', $data);
+        return view('App\Modules\IAM\Views\permissions\user_manage', $data);
     }
 
     /**
@@ -164,6 +164,6 @@ class UserPermissionController extends BaseController
             'title' => 'Permission Audit Log',
         ];
 
-        return view('Modules\IAM\Views\permissions\audit_log', $data);
+        return view('App\Modules\IAM\Views\permissions\audit_log', $data);
     }
 }

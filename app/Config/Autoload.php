@@ -40,12 +40,12 @@ class Autoload extends AutoloadConfig
     public $psr4 = [
         APP_NAMESPACE => APPPATH,
         'Modules'     => APPPATH . 'Modules',
-        'Modules\IAM'       => APPPATH . 'Modules/IAM',
-        'Modules\Dashboard' => APPPATH . 'Modules/Dashboard',
-        'Modules\Pricing'   => APPPATH . 'Modules/Pricing',
-        'Modules\Dispatch'  => APPPATH . 'Modules/Dispatch',
-        'Modules\Fleet'     => APPPATH . 'Modules/Fleet',
-        'Modules\Customer'  => APPPATH . 'Modules/Customer',
+        'App\Modules\IAM'       => APPPATH . 'Modules/IAM',
+        'App\Modules\Dashboard' => APPPATH . 'Modules/Dashboard',
+        'App\Modules\Pricing'   => APPPATH . 'Modules/Pricing',
+        'App\Modules\Dispatch'  => APPPATH . 'Modules/Dispatch',
+        'App\Modules\Fleet'     => APPPATH . 'Modules/Fleet',
+        'App\Modules\Customer'  => APPPATH . 'Modules/Customer',
     ];
 
     /**

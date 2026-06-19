@@ -16,7 +16,7 @@ class TripController extends BaseController
     {
         $this->tripModel = new TripModel();
         // Load the service
-        $this->pricingService = new \Modules\Pricing\Services\PricingService();
+        $this->pricingService = new \App\Modules\Pricing\Services\PricingService();
     }
 
     /**
@@ -93,8 +93,8 @@ class TripController extends BaseController
 
     public function new()
     {
-        $customerModel = new \Modules\Customer\Models\CustomerModel();
-        $driverModel = new \Modules\Fleet\Models\DriverModel();
+        $customerModel = new \App\Modules\Customer\Models\CustomerModel();
+        $driverModel = new \App\Modules\Fleet\Models\DriverModel();
 
         $data = [
             'trip' => new Trip(),
@@ -102,7 +102,7 @@ class TripController extends BaseController
             'drivers' => $driverModel->where('status', 'active')->findAll(),
             'title' => 'Create New Trip'
         ];
-        return view('Modules\Dispatch\Views\trips\form', $data);
+        return view('App\Modules\Dispatch\Views\trips\form', $data);
     }
 
     public function view($id)
@@ -113,8 +113,8 @@ class TripController extends BaseController
         }
 
         // Fetch related data
-        $customerModel = new \Modules\Customer\Models\CustomerModel();
-        $driverModel = new \Modules\Fleet\Models\DriverModel();
+        $customerModel = new \App\Modules\Customer\Models\CustomerModel();
+        $driverModel = new \App\Modules\Fleet\Models\DriverModel();
         
         $customer = $customerModel->find($trip->customer_id);
         $driver = $trip->driver_id ? $driverModel->find($trip->driver_id) : null;
@@ -127,7 +127,7 @@ class TripController extends BaseController
         ];
 
         // Fetch Ratings for this specific trip
-        $ratingModel = new \Modules\Dispatch\Models\RatingModel();
+        $ratingModel = new \App\Modules\Dispatch\Models\RatingModel();
         $ratings = $ratingModel->where('trip_id', $trip->id)->findAll();
 
         $data['trip_driver_rating'] = null; // Customer -> Driver
@@ -141,10 +141,10 @@ class TripController extends BaseController
             }
         }
         
-        $disputeModel = new \Modules\Dispatch\Models\DisputeModel();
+        $disputeModel = new \App\Modules\Dispatch\Models\DisputeModel();
         $data['dispute'] = $disputeModel->where('trip_id', $trip->id)->orderBy('created_at', 'DESC')->first();
         
-        return view('Modules\Dispatch\Views\trips\view', $data);
+        return view('App\Modules\Dispatch\Views\trips\view', $data);
     }
 
     public function edit($id)
@@ -154,8 +154,8 @@ class TripController extends BaseController
             return redirect()->to('/dispatch/trips')->with('error', 'Trip not found');
         }
 
-        $customerModel = new \Modules\Customer\Models\CustomerModel();
-        $driverModel = new \Modules\Fleet\Models\DriverModel();
+        $customerModel = new \App\Modules\Customer\Models\CustomerModel();
+        $driverModel = new \App\Modules\Fleet\Models\DriverModel();
 
         $data = [
             'trip' => $trip,
@@ -163,7 +163,7 @@ class TripController extends BaseController
             'drivers' => $driverModel->findAll(),
             'title' => 'Edit Trip #' . $trip->trip_number
         ];
-        return view('Modules\Dispatch\Views\trips\form', $data);
+        return view('App\Modules\Dispatch\Views\trips\form', $data);
     }
 
     public function update($id)
@@ -199,7 +199,7 @@ class TripController extends BaseController
         // Handle Driver Assignment Logic
         if (!empty($data['driver_id']) && $data['driver_id'] != $trip->driver_id) {
              // 1. Fetch Driver Commission Rate
-             $driverModel = new \Modules\Fleet\Models\DriverModel();
+             $driverModel = new \App\Modules\Fleet\Models\DriverModel();
              $driver = $driverModel->find($data['driver_id']);
              
              if ($driver) {
@@ -214,7 +214,7 @@ class TripController extends BaseController
                  $data['commission_amount'] = $commissionVal;
                  
                  // Notify Driver
-                 $notification = new \Modules\Dispatch\Services\NotificationService();
+                 $notification = new \App\Modules\Dispatch\Services\NotificationService();
                  $notification->notifyDriverAssigned($driver->id, $trip->trip_number);
              }
         }
@@ -411,7 +411,7 @@ class TripController extends BaseController
         $disputesByTripId = [];
         $disputesById = [];
         if (!empty($tripIds)) {
-            $disputeModel = new \Modules\Dispatch\Models\DisputeModel();
+            $disputeModel = new \App\Modules\Dispatch\Models\DisputeModel();
             $disputes = $disputeModel->whereIn('trip_id', $tripIds)->findAll();
             foreach ($disputes as $d) {
                 $disputesById[$d->id] = $d;
@@ -445,11 +445,11 @@ class TripController extends BaseController
         }
 
         // Fetch drivers for sidebar/modal
-        $driverModel = new \Modules\Fleet\Models\DriverModel();
+        $driverModel = new \App\Modules\Fleet\Models\DriverModel();
         $availableDrivers = $driverModel->where('status', 'active')->findAll();
 
         // Fetch customers for Quick Dispatch Modal
-        $customerModel = new \Modules\Customer\Models\CustomerModel();
+        $customerModel = new \App\Modules\Customer\Models\CustomerModel();
         $allCustomers = $customerModel->where('deleted_at', null)->orderBy('first_name', 'ASC')->findAll();
 
         $data = [
@@ -493,7 +493,7 @@ class TripController extends BaseController
                 }
                 $html = '';
                 foreach ($trips as $t) {
-                    $html .= view('Modules\Dispatch\Views\trips\_card', ['trip' => $t, 'type' => $type]);
+                    $html .= view('App\Modules\Dispatch\Views\trips\_card', ['trip' => $t, 'type' => $type]);
                 }
                 return $html;
             };
@@ -511,7 +511,7 @@ class TripController extends BaseController
             ]);
         }
         
-        return view('Modules\Dispatch\Views\trips\index', $data);
+        return view('App\Modules\Dispatch\Views\trips\index', $data);
     }
 
     /**
@@ -537,7 +537,7 @@ class TripController extends BaseController
             return redirect()->to('/dispatch/trips')->with('error', 'Trip not found.');
         }
 
-        return view('Modules\Dispatch\Views\trips\print', ['trip' => $trip]);
+        return view('App\Modules\Dispatch\Views\trips\print', ['trip' => $trip]);
     }
 
     /**
@@ -572,7 +572,7 @@ class TripController extends BaseController
             return redirect()->back()->with('error', 'No valid trips found for printing.');
         }
 
-        return view('Modules\Dispatch\Views\trips\bulk_print', ['trips' => $trips]);
+        return view('App\Modules\Dispatch\Views\trips\bulk_print', ['trips' => $trips]);
     }
 
     /**
@@ -617,7 +617,7 @@ class TripController extends BaseController
             'email' => $trips[0]->c_email
         ];
 
-        return view('Modules\Dispatch\Views\trips\statement', [
+        return view('App\Modules\Dispatch\Views\trips\statement', [
             'trips' => $trips,
             'customer' => $customer
         ]);

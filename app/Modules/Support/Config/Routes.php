@@ -1,6 +1,6 @@
 <?php
 
-namespace app\Modules\Support\Config;
+namespace app\App\Modules\Support\Config;
 
 $routes->group('api/support', ['namespace' => 'App\Modules\Support\Controllers'], function ($routes) {
     $routes->match(['get', 'post'], 'conversation', 'ChatController::getConversation');

@@ -22,7 +22,7 @@ class PermissionFilter implements FilterInterface
     public function before(RequestInterface $request, $arguments = null)
     {
         // Load the helper
-        helper('Modules\IAM\Helpers\permission');
+        helper('App\Modules\IAM\Helpers\permission');
 
         $session = session();
         $userId = $session->get('user_id');

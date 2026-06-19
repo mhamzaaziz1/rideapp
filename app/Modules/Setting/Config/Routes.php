@@ -6,7 +6,7 @@ use Config\Services;
 
 $routes = Services::routes();
 
-$routes->group('settings', ['namespace' => 'Modules\Setting\Controllers'], function ($routes) {
+$routes->group('settings', ['namespace' => 'App\Modules\Setting\Controllers'], function ($routes) {
     $routes->get('/', 'SettingController::index');
     $routes->get('clear-cache', 'SettingController::clear_cache');
     $routes->post('update', 'SettingController::update');
@@ -14,4 +14,4 @@ $routes->group('settings', ['namespace' => 'Modules\Setting\Controllers'], funct
 });
 
 // Global route for convenience if needed, though group covers it well.
-$routes->get('settings', 'SettingController::index', ['namespace' => 'Modules\Setting\Controllers']);
+$routes->get('settings', 'SettingController::index', ['namespace' => 'App\Modules\Setting\Controllers']);

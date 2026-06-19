@@ -50,7 +50,7 @@ class PayoutController extends BaseController
              WHERE user_type = 'driver' AND type = 'withdrawal'"
         )->getRow();
 
-        return view('Modules\Billing\Views\payouts\index', [
+        return view('App\Modules\Billing\Views\payouts\index', [
             'title'   => 'Driver Payouts',
             'payouts' => $payouts,
             'stats'   => $stats,

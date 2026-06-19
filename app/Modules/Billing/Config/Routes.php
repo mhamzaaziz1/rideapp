@@ -6,7 +6,7 @@ use Config\Services;
 
 $routes = Services::routes();
 
-$routes->group('finance', ['namespace' => 'Modules\Billing\Controllers'], function ($routes) {
+$routes->group('finance', ['namespace' => 'App\Modules\Billing\Controllers'], function ($routes) {
     $routes->get('/', 'FinanceController::index');
     $routes->get('print-trip/(:num)', 'FinanceController::printTrip/$1');
     $routes->post('bulk-print', 'FinanceController::bulkPrint');
@@ -20,4 +20,4 @@ $routes->group('finance', ['namespace' => 'Modules\Billing\Controllers'], functi
 });
 
 // Global route exposure
-$routes->get('finance', 'FinanceController::index', ['namespace' => 'Modules\Billing\Controllers']);
+$routes->get('finance', 'FinanceController::index', ['namespace' => 'App\Modules\Billing\Controllers']);

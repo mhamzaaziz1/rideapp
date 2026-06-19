@@ -24,7 +24,7 @@ if (!function_exists('can')) {
     {
         static $service = null;
         if ($service === null) {
-            $service = new \Modules\IAM\Services\PermissionService();
+            $service = new \App\Modules\IAM\Services\PermissionService();
         }
         return $service->currentUserCan($permission);
     }
@@ -54,7 +54,7 @@ if (!function_exists('can_any')) {
     {
         static $service = null;
         if ($service === null) {
-            $service = new \Modules\IAM\Services\PermissionService();
+            $service = new \App\Modules\IAM\Services\PermissionService();
         }
         return $service->currentUserCanAny($permissions);
     }
@@ -71,7 +71,7 @@ if (!function_exists('can_all')) {
     {
         static $service = null;
         if ($service === null) {
-            $service = new \Modules\IAM\Services\PermissionService();
+            $service = new \App\Modules\IAM\Services\PermissionService();
         }
         return $service->currentUserCanAll($permissions);
     }
@@ -87,7 +87,7 @@ if (!function_exists('is_admin')) {
     {
         static $service = null;
         if ($service === null) {
-            $service = new \Modules\IAM\Services\PermissionService();
+            $service = new \App\Modules\IAM\Services\PermissionService();
         }
         return $service->isAdmin();
     }
@@ -103,7 +103,7 @@ if (!function_exists('current_user_role')) {
     {
         static $service = null;
         if ($service === null) {
-            $service = new \Modules\IAM\Services\PermissionService();
+            $service = new \App\Modules\IAM\Services\PermissionService();
         }
         return $service->getCurrentUserRole();
     }
