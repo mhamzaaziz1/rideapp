@@ -1,11 +1,11 @@
 <?php
 
-namespace Modules\IAM\Controllers;
+namespace App\Modules\IAM\Controllers;
 
 use App\Controllers\BaseController;
-use Modules\IAM\Models\RoleModel;
-use Modules\IAM\Models\PermissionModel;
-use Modules\IAM\Services\PermissionService;
+use App\Modules\IAM\Models\RoleModel;
+use App\Modules\IAM\Models\PermissionModel;
+use App\Modules\IAM\Services\PermissionService;
 
 class RoleController extends BaseController
 {

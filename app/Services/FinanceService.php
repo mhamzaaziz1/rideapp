@@ -4,8 +4,8 @@ namespace App\Services;
 
 use App\Models\LedgerModel;
 use App\Models\LedgerTransactionModel;
-use Modules\Dispatch\Models\TripModel;
-use Modules\Fleet\Models\DriverModel;
+use App\Modules\Dispatch\Models\TripModel;
+use App\Modules\Fleet\Models\DriverModel;
 
 class FinanceService
 {

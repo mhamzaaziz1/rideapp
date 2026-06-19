@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\Dashboard\Config;
+namespace App\Modules\Dashboard\Config;
 
 use Config\Services;
 

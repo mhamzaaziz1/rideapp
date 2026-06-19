@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\Customer\Entities;
+namespace App\Modules\Customer\Entities;
 
 use CodeIgniter\Entity\Entity;
 

@@ -1,9 +1,9 @@
 <?php
 
-namespace Modules\Billing\Models;
+namespace App\Modules\Billing\Models;
 
 use CodeIgniter\Model;
-use Modules\Billing\Entities\Invoice;
+use App\Modules\Billing\Entities\Invoice;
 
 class InvoiceModel extends Model
 {

@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\CallCenter\Config;
+namespace App\Modules\CallCenter\Config;
 
 use Config\Services;
 

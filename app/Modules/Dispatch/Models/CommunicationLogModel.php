@@ -1,9 +1,9 @@
 <?php
 
-namespace Modules\Dispatch\Models;
+namespace App\Modules\Dispatch\Models;
 
 use CodeIgniter\Model;
-use Modules\Dispatch\Entities\CommunicationLog;
+use App\Modules\Dispatch\Entities\CommunicationLog;
 
 class CommunicationLogModel extends Model
 {

@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\IAM\Entities;
+namespace App\Modules\IAM\Entities;
 
 use CodeIgniter\Entity\Entity;
 

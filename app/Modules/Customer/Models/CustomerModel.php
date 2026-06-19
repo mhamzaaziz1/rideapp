@@ -1,9 +1,9 @@
 <?php
 
-namespace Modules\Customer\Models;
+namespace App\Modules\Customer\Models;
 
 use CodeIgniter\Model;
-use Modules\Customer\Entities\Customer;
+use App\Modules\Customer\Entities\Customer;
 
 class CustomerModel extends Model
 {

@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\Billing\Entities;
+namespace App\Modules\Billing\Entities;
 
 use CodeIgniter\Entity\Entity;
 

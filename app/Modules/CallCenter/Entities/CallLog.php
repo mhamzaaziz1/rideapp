@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\CallCenter\Entities;
+namespace App\Modules\CallCenter\Entities;
 
 use CodeIgniter\Entity\Entity;
 

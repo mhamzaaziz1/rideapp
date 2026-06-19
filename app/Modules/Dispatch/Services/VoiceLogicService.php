@@ -1,13 +1,13 @@
 <?php
 
-namespace Modules\Dispatch\Services;
+namespace App\Modules\Dispatch\Services;
 
-use Modules\Fleet\Models\DriverModel;
-use Modules\Customer\Models\CustomerModel;
-use Modules\Dispatch\Models\TripModel;
+use App\Modules\Fleet\Models\DriverModel;
+use App\Modules\Customer\Models\CustomerModel;
+use App\Modules\Dispatch\Models\TripModel;
 use Twilio\TwiML\VoiceResponse;
 use Config\Twilio;
-use Modules\Dispatch\Models\CommunicationLogModel;
+use App\Modules\Dispatch\Models\CommunicationLogModel;
 
 class VoiceLogicService
 {

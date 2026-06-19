@@ -1,9 +1,9 @@
 <?php
 
-namespace Modules\Dispatch\Controllers;
+namespace App\Modules\Dispatch\Controllers;
 
 use App\Controllers\BaseController;
-use Modules\Dispatch\Models\CommunicationLogModel;
+use App\Modules\Dispatch\Models\CommunicationLogModel;
 
 class CommunicationController extends BaseController
 {

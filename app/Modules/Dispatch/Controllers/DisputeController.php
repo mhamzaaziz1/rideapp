@@ -1,11 +1,11 @@
 <?php
 
-namespace Modules\Dispatch\Controllers;
+namespace App\Modules\Dispatch\Controllers;
 
 use App\Controllers\BaseController;
-use Modules\Dispatch\Models\DisputeModel;
-use Modules\Dispatch\Models\TripModel;
-use Modules\Billing\Services\WalletService;
+use App\Modules\Dispatch\Models\DisputeModel;
+use App\Modules\Dispatch\Models\TripModel;
+use App\Modules\Billing\Services\WalletService;
 
 class DisputeController extends BaseController
 {

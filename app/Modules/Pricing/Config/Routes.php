@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\Pricing\Config;
+namespace App\Modules\Pricing\Config;
 
 use Config\Services;
 

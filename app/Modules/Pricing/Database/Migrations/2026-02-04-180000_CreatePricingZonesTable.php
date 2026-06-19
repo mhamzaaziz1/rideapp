@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\Pricing\Database\Migrations;
+namespace App\Modules\Pricing\Database\Migrations;
 
 use CodeIgniter\Database\Migration;
 

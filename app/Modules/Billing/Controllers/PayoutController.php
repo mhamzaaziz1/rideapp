@@ -1,11 +1,11 @@
 <?php
 
-namespace Modules\Billing\Controllers;
+namespace App\Modules\Billing\Controllers;
 
 use App\Controllers\BaseController;
-use Modules\Fleet\Models\DriverModel;
-use Modules\Billing\Models\WalletTransactionModel;
-use Modules\Billing\Services\WalletService;
+use App\Modules\Fleet\Models\DriverModel;
+use App\Modules\Billing\Models\WalletTransactionModel;
+use App\Modules\Billing\Services\WalletService;
 
 /**
  * PayoutController

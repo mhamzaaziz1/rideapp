@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\Setting\Config;
+namespace App\Modules\Setting\Config;
 
 use Config\Services;
 

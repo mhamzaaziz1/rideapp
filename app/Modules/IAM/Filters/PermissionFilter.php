@@ -1,11 +1,11 @@
 <?php
 
-namespace Modules\IAM\Filters;
+namespace App\Modules\IAM\Filters;
 
 use CodeIgniter\Filters\FilterInterface;
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
-use Modules\IAM\Services\PermissionService;
+use App\Modules\IAM\Services\PermissionService;
 
 /**
  * PermissionFilter - Route-level permission enforcement

@@ -1,9 +1,9 @@
 <?php
 
-namespace Modules\Customer\Controllers;
+namespace App\Modules\Customer\Controllers;
 
 use App\Controllers\BaseController;
-use Modules\Customer\Models\CustomerAddressModel;
+use App\Modules\Customer\Models\CustomerAddressModel;
 
 class CustomerAddressController extends BaseController
 {

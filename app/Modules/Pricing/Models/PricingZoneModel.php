@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\Pricing\Models;
+namespace App\Modules\Pricing\Models;
 
 use CodeIgniter\Model;
 

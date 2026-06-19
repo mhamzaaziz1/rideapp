@@ -1,9 +1,9 @@
 <?php
 
-namespace Modules\CallCenter\Models;
+namespace App\Modules\CallCenter\Models;
 
 use CodeIgniter\Model;
-use Modules\CallCenter\Entities\CallLog;
+use App\Modules\CallCenter\Entities\CallLog;
 
 class CallLogModel extends Model
 {

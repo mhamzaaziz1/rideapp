@@ -1,12 +1,12 @@
 <?php
 
-namespace Modules\Fleet\Controllers;
+namespace App\Modules\Fleet\Controllers;
 
 use App\Controllers\BaseController;
-use Modules\Fleet\Models\DriverModel;
-use Modules\Billing\Models\WalletTransactionModel;
-use Modules\Billing\Services\WalletService;
-use Modules\Dispatch\Models\RatingModel;
+use App\Modules\Fleet\Models\DriverModel;
+use App\Modules\Billing\Models\WalletTransactionModel;
+use App\Modules\Billing\Services\WalletService;
+use App\Modules\Dispatch\Models\RatingModel;
 
 class DriversController extends BaseController
 {

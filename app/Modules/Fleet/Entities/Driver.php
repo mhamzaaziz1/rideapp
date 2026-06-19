@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\Fleet\Entities;
+namespace App\Modules\Fleet\Entities;
 
 use CodeIgniter\Entity\Entity;
 

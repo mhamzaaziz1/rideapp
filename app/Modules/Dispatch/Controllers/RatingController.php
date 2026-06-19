@@ -1,12 +1,12 @@
 <?php
 
-namespace Modules\Dispatch\Controllers;
+namespace App\Modules\Dispatch\Controllers;
 
 use App\Controllers\BaseController;
-use Modules\Dispatch\Models\RatingModel;
-use Modules\Dispatch\Models\TripModel;
-use Modules\Fleet\Models\DriverModel;
-use Modules\Customer\Models\CustomerModel;
+use App\Modules\Dispatch\Models\RatingModel;
+use App\Modules\Dispatch\Models\TripModel;
+use App\Modules\Fleet\Models\DriverModel;
+use App\Modules\Customer\Models\CustomerModel;
 
 class RatingController extends BaseController
 {

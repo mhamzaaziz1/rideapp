@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\Dispatch\Config;
+namespace App\Modules\Dispatch\Config;
 
 use Config\Services;
 

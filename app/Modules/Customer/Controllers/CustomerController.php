@@ -1,14 +1,14 @@
 <?php
 
-namespace Modules\Customer\Controllers;
+namespace App\Modules\Customer\Controllers;
 
 use App\Controllers\BaseController;
-use Modules\Customer\Models\CustomerModel;
-use Modules\Customer\Models\CustomerAddressModel;
-use Modules\Billing\Models\WalletTransactionModel;
-use Modules\Billing\Services\WalletService;
-use Modules\Dispatch\Models\RatingModel;
-use Modules\Customer\Models\CustomerCardModel;
+use App\Modules\Customer\Models\CustomerModel;
+use App\Modules\Customer\Models\CustomerAddressModel;
+use App\Modules\Billing\Models\WalletTransactionModel;
+use App\Modules\Billing\Services\WalletService;
+use App\Modules\Dispatch\Models\RatingModel;
+use App\Modules\Customer\Models\CustomerCardModel;
 
 class CustomerController extends BaseController
 {

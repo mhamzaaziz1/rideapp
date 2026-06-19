@@ -1,10 +1,10 @@
 <?php
 
-namespace Modules\Dispatch\Controllers;
+namespace App\Modules\Dispatch\Controllers;
 
 use App\Controllers\BaseController;
-use Modules\Fleet\Models\DriverModel;
-use Modules\Dispatch\Models\TripModel;
+use App\Modules\Fleet\Models\DriverModel;
+use App\Modules\Dispatch\Models\TripModel;
 
 class DispatchController extends BaseController
 {

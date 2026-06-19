@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\Fleet\Models;
+namespace App\Modules\Fleet\Models;
 
 use CodeIgniter\Model;
 

@@ -1,9 +1,9 @@
 <?php
 
-namespace Modules\Customer\Controllers;
+namespace App\Modules\Customer\Controllers;
 
 use App\Controllers\BaseController;
-use Modules\Customer\Models\CustomerCardModel;
+use App\Modules\Customer\Models\CustomerCardModel;
 
 class CustomerCardController extends BaseController
 {

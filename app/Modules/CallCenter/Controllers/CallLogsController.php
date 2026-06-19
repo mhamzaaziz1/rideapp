@@ -1,9 +1,9 @@
 <?php
 
-namespace Modules\CallCenter\Controllers;
+namespace App\Modules\CallCenter\Controllers;
 
 use App\Controllers\BaseController;
-use Modules\CallCenter\Models\CallLogModel;
+use App\Modules\CallCenter\Models\CallLogModel;
 
 class CallLogsController extends BaseController
 {

@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\Dispatch\Controllers;
+namespace App\Modules\Dispatch\Controllers;
 
 use App\Controllers\BaseController;
 use Twilio\TwiML\MessagingResponse;

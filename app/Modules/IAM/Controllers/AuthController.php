@@ -1,9 +1,9 @@
 <?php
 
-namespace Modules\IAM\Controllers;
+namespace App\Modules\IAM\Controllers;
 
 use CodeIgniter\RESTful\ResourceController;
-use Modules\IAM\Services\AuthService;
+use App\Modules\IAM\Services\AuthService;
 use Exception;
 
 class AuthController extends ResourceController

@@ -1,10 +1,10 @@
 <?php
 
-namespace Modules\Dispatch\Controllers;
+namespace App\Modules\Dispatch\Controllers;
 
 use App\Controllers\BaseController;
-use Modules\Dispatch\Models\TripModel;
-use Modules\Dispatch\Entities\Trip;
+use App\Modules\Dispatch\Models\TripModel;
+use App\Modules\Dispatch\Entities\Trip;
 use App\Services\FinanceService;
 
 class TripController extends BaseController

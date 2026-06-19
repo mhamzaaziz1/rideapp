@@ -1,10 +1,10 @@
 <?php
 
-namespace Modules\IAM\Controllers;
+namespace App\Modules\IAM\Controllers;
 
 use App\Controllers\BaseController;
-use Modules\IAM\Models\UserModel;
-use Modules\IAM\Models\RoleModel;
+use App\Modules\IAM\Models\UserModel;
+use App\Modules\IAM\Models\RoleModel;
 
 class StaffController extends BaseController
 {

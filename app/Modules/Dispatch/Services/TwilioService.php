@@ -1,10 +1,10 @@
 <?php
 
-namespace Modules\Dispatch\Services;
+namespace App\Modules\Dispatch\Services;
 
 use Twilio\Rest\Client;
 use Config\Twilio;
-use Modules\Dispatch\Models\CommunicationLogModel;
+use App\Modules\Dispatch\Models\CommunicationLogModel;
 
 class TwilioService
 {

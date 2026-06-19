@@ -1,9 +1,9 @@
 <?php
 
-namespace Modules\IAM\Models;
+namespace App\Modules\IAM\Models;
 
 use CodeIgniter\Model;
-use Modules\IAM\Entities\User;
+use App\Modules\IAM\Entities\User;
 
 class UserModel extends Model
 {

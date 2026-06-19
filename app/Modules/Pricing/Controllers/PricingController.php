@@ -1,12 +1,12 @@
 <?php
 
-namespace Modules\Pricing\Controllers;
+namespace App\Modules\Pricing\Controllers;
 
 use App\Controllers\BaseController;
-use Modules\Pricing\Models\PricingRuleModel;
-use Modules\Pricing\Models\PricingPeakHourModel;
+use App\Modules\Pricing\Models\PricingRuleModel;
+use App\Modules\Pricing\Models\PricingPeakHourModel;
 
-use Modules\Pricing\Models\PricingZoneModel;
+use App\Modules\Pricing\Models\PricingZoneModel;
 
 class PricingController extends BaseController
 {

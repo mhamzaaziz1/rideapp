@@ -1,12 +1,12 @@
 <?php
 
-namespace Modules\Billing\Controllers;
+namespace App\Modules\Billing\Controllers;
 
 use App\Controllers\BaseController;
-use Modules\Billing\Models\InvoiceModel;
-use Modules\Billing\Models\WalletTransactionModel;
-use Modules\Dispatch\Models\TripModel;
-use Modules\Fleet\Models\DriverModel;
+use App\Modules\Billing\Models\InvoiceModel;
+use App\Modules\Billing\Models\WalletTransactionModel;
+use App\Modules\Dispatch\Models\TripModel;
+use App\Modules\Fleet\Models\DriverModel;
 use CodeIgniter\I18n\Time;
 
 class FinanceController extends BaseController

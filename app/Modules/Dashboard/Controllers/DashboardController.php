@@ -1,11 +1,11 @@
 <?php
 
-namespace Modules\Dashboard\Controllers;
+namespace App\Modules\Dashboard\Controllers;
 
 use App\Controllers\BaseController;
-use Modules\Dispatch\Models\TripModel;
-use Modules\Fleet\Models\DriverModel;
-use Modules\Customer\Models\CustomerModel;
+use App\Modules\Dispatch\Models\TripModel;
+use App\Modules\Fleet\Models\DriverModel;
+use App\Modules\Customer\Models\CustomerModel;
 
 class DashboardController extends BaseController
 {

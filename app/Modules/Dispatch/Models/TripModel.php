@@ -1,9 +1,9 @@
 <?php
 
-namespace Modules\Dispatch\Models;
+namespace App\Modules\Dispatch\Models;
 
 use CodeIgniter\Model;
-use Modules\Dispatch\Entities\Trip;
+use App\Modules\Dispatch\Entities\Trip;
 
 class TripModel extends Model
 {

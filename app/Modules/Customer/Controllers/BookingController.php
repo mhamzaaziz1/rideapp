@@ -1,11 +1,11 @@
 <?php
 
-namespace Modules\Customer\Controllers;
+namespace App\Modules\Customer\Controllers;
 
 use App\Controllers\BaseController;
-use Modules\Dispatch\Models\TripModel;
-use Modules\Dispatch\Entities\Trip;
-use Modules\Pricing\Services\PricingService;
+use App\Modules\Dispatch\Models\TripModel;
+use App\Modules\Dispatch\Entities\Trip;
+use App\Modules\Pricing\Services\PricingService;
 
 class BookingController extends BaseController
 {

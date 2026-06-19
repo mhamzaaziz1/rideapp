@@ -1,9 +1,9 @@
 <?php
 
-namespace Modules\Fleet\Models;
+namespace App\Modules\Fleet\Models;
 
 use CodeIgniter\Model;
-use Modules\Fleet\Entities\Driver;
+use App\Modules\Fleet\Entities\Driver;
 
 class DriverModel extends Model
 {

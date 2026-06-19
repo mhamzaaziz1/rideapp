@@ -1,8 +1,8 @@
 <?php
 
-namespace Modules\Pricing\Services;
+namespace App\Modules\Pricing\Services;
 
-use Modules\Pricing\Models\PricingZoneModel;
+use App\Modules\Pricing\Models\PricingZoneModel;
 
 class PricingService
 {

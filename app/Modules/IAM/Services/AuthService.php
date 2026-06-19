@@ -1,10 +1,10 @@
 <?php
 
-namespace Modules\IAM\Services;
+namespace App\Modules\IAM\Services;
 
 use Firebase\JWT\JWT;
-use Modules\IAM\Entities\User;
-use Modules\IAM\Models\UserModel;
+use App\Modules\IAM\Entities\User;
+use App\Modules\IAM\Models\UserModel;
 use Exception;
 
 class AuthService

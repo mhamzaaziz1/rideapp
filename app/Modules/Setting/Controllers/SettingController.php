@@ -1,11 +1,11 @@
 <?php
 
-namespace Modules\Setting\Controllers;
+namespace App\Modules\Setting\Controllers;
 
 use App\Controllers\BaseController;
-use Modules\IAM\Models\UserModel;
-use Modules\IAM\Models\RoleModel;
-use Modules\IAM\Models\PermissionModel;
+use App\Modules\IAM\Models\UserModel;
+use App\Modules\IAM\Models\RoleModel;
+use App\Modules\IAM\Models\PermissionModel;
 
 class SettingController extends BaseController
 {

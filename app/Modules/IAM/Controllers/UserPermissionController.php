@@ -1,11 +1,11 @@
 <?php
 
-namespace Modules\IAM\Controllers;
+namespace App\Modules\IAM\Controllers;
 
 use App\Controllers\BaseController;
-use Modules\IAM\Models\UserModel;
-use Modules\IAM\Models\PermissionModel;
-use Modules\IAM\Services\PermissionService;
+use App\Modules\IAM\Models\UserModel;
+use App\Modules\IAM\Models\PermissionModel;
+use App\Modules\IAM\Services\PermissionService;
 
 /**
  * UserPermissionController - Manage direct user-level permission overrides

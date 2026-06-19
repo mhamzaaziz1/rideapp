@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\Dispatch\Services;
+namespace App\Modules\Dispatch\Services;
 
 use App\Libraries\SmsService;
 

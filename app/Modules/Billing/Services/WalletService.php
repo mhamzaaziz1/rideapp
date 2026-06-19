@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\Billing\Services;
+namespace App\Modules\Billing\Services;
 
 class WalletService
 {

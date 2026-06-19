@@ -1,10 +1,10 @@
 <?php
 
-namespace Modules\IAM\Services;
+namespace App\Modules\IAM\Services;
 
-use Modules\IAM\Models\UserModel;
-use Modules\IAM\Models\RoleModel;
-use Modules\IAM\Models\PermissionModel;
+use App\Modules\IAM\Models\UserModel;
+use App\Modules\IAM\Models\RoleModel;
+use App\Modules\IAM\Models\PermissionModel;
 
 /**
  * PermissionService - Central permission checking engine

@@ -1,9 +1,9 @@
 <?php
 
-namespace Modules\IAM\Database\Seeds;
+namespace App\Modules\IAM\Database\Seeds;
 
 use CodeIgniter\Database\Seeder;
-use Modules\IAM\Services\AuthService;
+use App\Modules\IAM\Services\AuthService;
 
 class UserSeeder extends Seeder
 {

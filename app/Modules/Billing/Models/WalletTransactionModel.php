@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\Billing\Models;
+namespace App\Modules\Billing\Models;
 
 use CodeIgniter\Model;
 

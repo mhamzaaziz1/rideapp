@@ -1,9 +1,9 @@
 <?php
 
-namespace Modules\Fleet\Database\Seeds;
+namespace App\Modules\Fleet\Database\Seeds;
 
 use CodeIgniter\Database\Seeder;
-use Modules\Fleet\Models\DriverModel;
+use App\Modules\Fleet\Models\DriverModel;
 
 class DriverSeeder extends Seeder
 {

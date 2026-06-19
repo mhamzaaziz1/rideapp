@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\Billing\Config;
+namespace App\Modules\Billing\Config;
 
 use Config\Services;
 
