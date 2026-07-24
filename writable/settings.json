@@ -9,7 +9,7 @@
     "company_phone": "+447448666853",
     "company_vat": "VICTORIA BRANDS (PRIVATE) LIMITED",
     "map_provider": "google",
-    "google_maps_api_key": "AIzaSyDJWoevXadJVDNHB3awypKVJGIn9UR8HQA",
+    "google_maps_api_key": "",
     "pusher_app_id": "",
     "pusher_key": "",
     "pusher_secret": "",
@@ -21,5 +21,7 @@
     "telnyx_api_key": "",
     "telnyx_number": "+19286835620",
     "telnyx_messaging_profile_id": "40019e93-fecd-4f2f-bcde-2fdb920193dc",
-    "telnyx_public_key": ""
+    "telnyx_public_key": "",
+    "telnyx_sip_username": "",
+    "telnyx_sip_password": ""
 }

@@ -135,6 +135,7 @@ class SettingController extends BaseController
                 'twilio_sid', 'twilio_token', 'twilio_number',
                 // Telnyx
                 'telnyx_api_key', 'telnyx_number', 'telnyx_messaging_profile_id', 'telnyx_public_key',
+                'telnyx_sip_username', 'telnyx_sip_password',
             ];
 
             foreach ($fields as $field) {

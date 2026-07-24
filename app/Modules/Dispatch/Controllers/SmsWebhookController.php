@@ -51,6 +51,8 @@ class SmsWebhookController extends BaseController
         $twiml = '<?xml version="1.0" encoding="UTF-8"?><Response>';
         if (!empty($reply)) {
             $twiml .= '<Message>' . htmlspecialchars($reply) . '</Message>';
+            // Log the outbound auto-reply (Note: $from is the user's phone, $to is our system phone)
+            $this->logAutoReply('twilio', $from, $to, $reply);
         }
         $twiml .= '</Response>';
 
@@ -65,6 +67,11 @@ class SmsWebhookController extends BaseController
      */
     public function telnyx()
     {
+        // Handle GET requests (like browser testing) gracefully
+        if (strtolower($this->request->getMethod()) === 'get') {
+            return $this->response->setStatusCode(200)->setJSON(['status' => 'Telnyx Webhook endpoint is active and listening']);
+        }
+
         $rawPayload = $this->request->getBody();
         $payload = json_decode($rawPayload ?? '');
 
@@ -110,6 +117,8 @@ class SmsWebhookController extends BaseController
             try {
                 $smsService = new \App\Libraries\SmsService();
                 $smsService->send($from, $reply);
+                // Log the outbound auto-reply
+                $this->logAutoReply('telnyx', $from, $to, $reply);
             } catch (\Exception $e) {
                 log_message('error', "[SMS:Telnyx] Failed to send auto-reply: " . $e->getMessage());
             }
@@ -184,19 +193,21 @@ class SmsWebhookController extends BaseController
         try {
             $db = \Config\Database::connect();
 
-            if ($db->tableExists('sms_messages')) {
-                // Resolve related user: try matching phone to a driver or customer
-                $relatedUserId = null;
-                $driver = $db->table('drivers')->select('id')->where('phone', $from)->get()->getRow();
-                if ($driver) {
-                    $relatedUserId = $driver->id;
-                } else {
-                    $customer = $db->table('customers')->select('id')->where('phone', $from)->get()->getRow();
-                    if ($customer) {
-                        $relatedUserId = $customer->id;
-                    }
+            $relatedUserId = null;
+            $userType = 'unknown';
+            $driver = $db->table('drivers')->select('id')->where('phone', $from)->get()->getRow();
+            if ($driver) {
+                $relatedUserId = $driver->id;
+                $userType = 'driver';
+            } else {
+                $customer = $db->table('customers')->select('id')->where('phone', $from)->get()->getRow();
+                if ($customer) {
+                    $relatedUserId = $customer->id;
+                    $userType = 'customer';
                 }
+            }
 
+            if ($db->tableExists('sms_messages')) {
                 $db->table('sms_messages')->insert([
                     'provider'        => $provider,
                     'direction'       => 'inbound',
@@ -209,8 +220,72 @@ class SmsWebhookController extends BaseController
                     'created_at'      => date('Y-m-d H:i:s'),
                 ]);
             }
+
+            $logModel = new \App\Modules\Dispatch\Models\CommunicationLogModel();
+            $logModel->insert([
+                'type' => 'sms',
+                'direction' => 'inbound',
+                'from_number' => $from,
+                'to_number' => $to,
+                'user_type' => $userType,
+                'user_id' => $relatedUserId,
+                'content' => $body,
+                'action_taken' => 'Received inbound SMS via ' . ucfirst($provider)
+            ]);
         } catch (\Exception $e) {
             log_message('error', "[SMS] Failed to store inbound message: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Log an outbound auto-reply to the database
+     */
+    protected function logAutoReply(string $provider, string $to, string $from, string $body): void
+    {
+        try {
+            $db = \Config\Database::connect();
+
+            $relatedUserId = null;
+            $userType = 'unknown';
+            $driver = $db->table('drivers')->select('id')->where('phone', $to)->get()->getRow();
+            if ($driver) {
+                $relatedUserId = $driver->id;
+                $userType = 'driver';
+            } else {
+                $customer = $db->table('customers')->select('id')->where('phone', $to)->get()->getRow();
+                if ($customer) {
+                    $relatedUserId = $customer->id;
+                    $userType = 'customer';
+                }
+            }
+
+            if ($db->tableExists('sms_messages')) {
+                $db->table('sms_messages')->insert([
+                    'provider'        => $provider,
+                    'direction'       => 'outbound',
+                    'from_number'     => $from,
+                    'to_number'       => $to,
+                    'body'            => $body,
+                    'external_id'     => null,
+                    'status'          => 'sent',
+                    'related_user_id' => $relatedUserId,
+                    'created_at'      => date('Y-m-d H:i:s'),
+                ]);
+            }
+
+            $logModel = new \App\Modules\Dispatch\Models\CommunicationLogModel();
+            $logModel->insert([
+                'type' => 'sms',
+                'direction' => 'outbound',
+                'from_number' => $from,
+                'to_number' => $to,
+                'user_type' => $userType,
+                'user_id' => $relatedUserId,
+                'content' => $body,
+                'action_taken' => 'Auto-reply sent via ' . ucfirst($provider)
+            ]);
+        } catch (\Exception $e) {
+            log_message('error', "[SMS] Failed to store auto-reply message: " . $e->getMessage());
         }
     }
 

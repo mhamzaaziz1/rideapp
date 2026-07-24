@@ -177,14 +177,23 @@
     .star-item:hover, .star-item.active { color: #f59e0b; fill: #f59e0b; }
     .star-rating { display: flex; gap: 4px; }
     
-    .modal-star {
-        cursor: pointer;
-        transition: all 0.2s;
-        color: var(--text-tertiary);
+    .modal-star { cursor: pointer; transition: 0.2s; color: var(--text-tertiary); }
+    .modal-star:hover, .modal-star.active { color: #f59e0b; fill: #f59e0b; }
+
+    /* Fix Google Maps Autocomplete z-index in Bootstrap Modals */
+    .pac-container {
+        z-index: 10000 !important;
     }
-    .modal-star:hover, .modal-star.active {
-        color: #f59e0b;
-        transform: scale(1.1);
+
+    /* WebRTC Animations */
+    @keyframes pulse-ring {
+        0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+        70% { transform: scale(1); box-shadow: 0 0 0 15px rgba(59, 130, 246, 0); }
+        100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+    }
+    @keyframes bounce-call {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-5px); }
     }
 
 </style>
@@ -229,9 +238,9 @@
 
             <!-- Live Section -->
             <div class="col-panel" style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
-                <div class="panel-header">
-                    <i data-lucide="navigation" width="16"></i> Live
-                    <span class="badge bg-secondary-subtle ms-auto"><?= isset($activeTrips) ? count($activeTrips) : 0 ?></span>
+                <div class="panel-header" style="display:flex; justify-content:space-between; align-items:center;">
+                    <div><i data-lucide="navigation" width="16"></i> Live <span class="badge bg-secondary-subtle"><?= isset($activeTrips) ? count($activeTrips) : 0 ?></span></div>
+                    <button class="btn btn-sm btn-outline-primary" style="padding: 2px 6px; font-size: 0.7rem;" data-bs-toggle="modal" data-bs-target="#addManualTripModal"><i data-lucide="plus" width="12"></i> Add Trip</button>
                 </div>
                 <div class="panel-body" style="flex: 1; overflow-y: auto;">
                     <?php if(isset($activeTrips) && !empty($activeTrips)): ?>
@@ -240,7 +249,17 @@
                             <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
                                 <span style="font-family:monospace; font-weight:700; color:var(--primary); font-size:0.75rem;">TRP-<?= esc($t->trip_number) ?></span>
                                 <div class="dropdown" style="display:inline-block;">
-                                    <span class="badge bg-success-subtle" style="font-size:9px;"><?= esc($t->status) ?></span>
+                                    <?php
+                                        $bgClass = 'bg-secondary';
+                                        switch($t->status) {
+                                            case 'pending': $bgClass = 'bg-secondary'; break;
+                                            case 'active': $bgClass = 'bg-success'; break;
+                                            case 'dispatching': $bgClass = 'bg-info text-dark'; break;
+                                            case 'completed': $bgClass = 'bg-primary'; break;
+                                            case 'cancelled': $bgClass = 'bg-danger'; break;
+                                        }
+                                    ?>
+                                    <span class="badge <?= $bgClass ?>" style="font-size:10px; padding: 4px 6px;"><?= esc(ucfirst($t->status)) ?></span>
                                     <a href="javascript:void(0)" data-bs-toggle="dropdown" onclick="event.stopPropagation()" style="color:var(--text-tertiary); margin-left:6px;"><i data-lucide="more-vertical" width="14"></i></a>
                                     <ul class="dropdown-menu dropdown-menu-end shadow border-0" style="font-size: 0.8rem; border-radius: 10px;">
                                         <?php if(empty($t->system_rated_driver)): ?>
@@ -276,13 +295,21 @@
         <div style="display:flex; flex-direction:column; gap:12px; height: 100%; min-height: 0;">
             <!-- Customer Panel -->
             <div class="col-panel" style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
-                <div class="panel-header">
-                    <i data-lucide="user" width="16"></i> Customer
+                <div class="panel-header" style="display:flex; justify-content:space-between; align-items:center;">
+                    <div><i data-lucide="user" width="16"></i> Customer</div>
+                    <button class="btn btn-sm btn-outline-primary" style="padding: 2px 6px; font-size: 0.7rem;" data-bs-toggle="modal" data-bs-target="#addCustomerModal"><i data-lucide="plus" width="12"></i> Add</button>
                 </div>
                 <div class="panel-body" id="customer-section-parent">
-                    <div style="text-align:center; padding: 2rem 1rem; color:var(--text-tertiary);" id="customer-empty">
+                    <div style="text-align:center; padding: 1.5rem 1rem; color:var(--text-tertiary);" id="customer-empty">
                         <i data-lucide="user-plus" width="32" style="opacity:0.2; margin-bottom:1rem;"></i>
-                        <p style="font-size:0.75rem;">Select trip/call</p>
+                        <p style="font-size:0.75rem; margin-bottom: 1rem;">Select a call, or search customer</p>
+                        
+                        <div style="position: relative; text-align: left; background: var(--bg-body); padding: 12px; border-radius: 12px; border: 1px solid var(--border-color);">
+                            <label style="font-size: 0.7rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; display: block;">MANUAL TRIP</label>
+                            <input type="text" id="manual-customer-search" class="form-control form-control-sm" placeholder="Search phone or name..." autocomplete="off">
+                            <div id="customer-search-results" class="dropdown-menu w-100 shadow-sm" style="position: absolute; top: 100%; left: 0; max-height: 200px; overflow-y: auto; display: none; z-index: 1000; border-radius: 8px;">
+                            </div>
+                        </div>
                     </div>
 
                     <div id="customer-section" style="display:none;">
@@ -321,8 +348,9 @@
 
             <!-- Driver Panel -->
             <div class="col-panel" style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
-                <div class="panel-header">
-                    <i data-lucide="car" width="16"></i> Driver
+                <div class="panel-header" style="display:flex; justify-content:space-between; align-items:center;">
+                    <div><i data-lucide="car" width="16"></i> Driver</div>
+                    <button class="btn btn-sm btn-outline-primary" style="padding: 2px 6px; font-size: 0.7rem;" data-bs-toggle="modal" data-bs-target="#addDriverModal"><i data-lucide="plus" width="12"></i> Add</button>
                 </div>
                 <div class="panel-body" id="driver-section-parent">
                     <div style="text-align:center; padding: 2rem 1rem; color:var(--text-tertiary);" id="driver-empty">
@@ -590,6 +618,9 @@
             });
         };
 
+        let tempPickupMarker = null;
+        let tempDropoffMarker = null;
+
         // Add listeners to address inputs
         const setupAutocomplete = () => {
             if (typeof google === 'undefined' || !google.maps || !google.maps.places) {
@@ -603,16 +634,175 @@
             if (pickupInput) {
                 const acPickup = new google.maps.places.Autocomplete(pickupInput);
                 acPickup.addListener('place_changed', () => {
-                    calculateRoute();
+                    const place = acPickup.getPlace();
+                    if (place && place.geometry) {
+                        if (tempPickupMarker) tempPickupMarker.setMap(null);
+                        tempPickupMarker = new google.maps.Marker({
+                            position: place.geometry.location,
+                            map: map,
+                            icon: { path: google.maps.SymbolPath.CIRCLE, scale: 8, fillColor: '#10b981', fillOpacity: 1, strokeWeight: 2, strokeColor: '#fff' }
+                        });
+                        if (!dropoffInput.value) {
+                            map.setCenter(place.geometry.location);
+                            map.setZoom(14);
+                            if (directionsRenderer) directionsRenderer.setDirections({routes: []});
+                        }
+                    }
+                    if (pickupInput.value && dropoffInput.value) {
+                        if (tempPickupMarker) tempPickupMarker.setMap(null);
+                        if (tempDropoffMarker) tempDropoffMarker.setMap(null);
+                        calculateRoute();
+                    }
                 });
             }
 
             if (dropoffInput) {
                 const acDropoff = new google.maps.places.Autocomplete(dropoffInput);
                 acDropoff.addListener('place_changed', () => {
-                    calculateRoute();
+                    const place = acDropoff.getPlace();
+                    if (place && place.geometry) {
+                        if (tempDropoffMarker) tempDropoffMarker.setMap(null);
+                        tempDropoffMarker = new google.maps.Marker({
+                            position: place.geometry.location,
+                            map: map,
+                            icon: { path: google.maps.SymbolPath.CIRCLE, scale: 8, fillColor: '#ef4444', fillOpacity: 1, strokeWeight: 2, strokeColor: '#fff' }
+                        });
+                        if (!pickupInput.value) {
+                            map.setCenter(place.geometry.location);
+                            map.setZoom(14);
+                            if (directionsRenderer) directionsRenderer.setDirections({routes: []});
+                        }
+                    }
+                    if (pickupInput.value && dropoffInput.value) {
+                        if (tempPickupMarker) tempPickupMarker.setMap(null);
+                        if (tempDropoffMarker) tempDropoffMarker.setMap(null);
+                        calculateRoute();
+                    }
                 });
             }
+            
+            // Quick Dispatch Modal Autocomplete & Mini Map
+            const manualPickupInput = document.getElementById('manual-trip-pickup');
+            const manualDropoffInput = document.getElementById('manual-trip-dropoff');
+            
+            let manualMap = null;
+            let manualDirectionsService = null;
+            let manualDirectionsRenderer = null;
+            let manualPickupMarker = null;
+            let manualDropoffMarker = null;
+
+            const updateManualMap = () => {
+                const mapContainer = document.getElementById('manual-trip-map-container');
+                if (!manualPickupInput || !manualDropoffInput) return;
+
+                // Initialize map if not done yet
+                if (!manualMap && google.maps && google.maps.Map) {
+                    manualMap = new google.maps.Map(document.getElementById('manual-trip-map'), {
+                        zoom: 12,
+                        center: { lat: 40.7128, lng: -74.0060 }, // Default NYC
+                        disableDefaultUI: true,
+                        mapTypeControl: false,
+                        streetViewControl: false
+                    });
+                    manualDirectionsService = new google.maps.DirectionsService();
+                    manualDirectionsRenderer = new google.maps.DirectionsRenderer({
+                        map: manualMap,
+                        suppressMarkers: true,
+                        polylineOptions: { strokeColor: '#3b82f6', strokeWeight: 4 }
+                    });
+                }
+
+                // Make sure map container is visible if there's any input, else hide
+                if (manualPickupInput.value || manualDropoffInput.value) {
+                    if (mapContainer.style.display === 'none') {
+                        mapContainer.style.display = 'block';
+                        // Google Maps requires resize event when made visible
+                        google.maps.event.trigger(manualMap, 'resize');
+                    }
+                } else {
+                    mapContainer.style.display = 'none';
+                    return;
+                }
+            };
+
+            let acManualPickup, acManualDropoff;
+
+            if (manualPickupInput) {
+                acManualPickup = new google.maps.places.Autocomplete(manualPickupInput);
+                acManualPickup.addListener('place_changed', () => {
+                    updateManualMap();
+                    const place = acManualPickup.getPlace();
+                    if (!place.geometry) return;
+                    
+                    if (manualPickupMarker) manualPickupMarker.setMap(null);
+                    manualPickupMarker = new google.maps.Marker({
+                        position: place.geometry.location,
+                        map: manualMap,
+                        icon: { path: google.maps.SymbolPath.CIRCLE, scale: 7, fillColor: '#10b981', fillOpacity: 1, strokeWeight: 2, strokeColor: '#fff' }
+                    });
+
+                    if (!manualDropoffInput.value) {
+                        manualMap.setCenter(place.geometry.location);
+                        manualMap.setZoom(14);
+                        manualDirectionsRenderer.setDirections({routes: []}); // Clear route
+                    } else {
+                        drawManualRoute();
+                    }
+                });
+            }
+
+            if (manualDropoffInput) {
+                acManualDropoff = new google.maps.places.Autocomplete(manualDropoffInput);
+                acManualDropoff.addListener('place_changed', () => {
+                    updateManualMap();
+                    const place = acManualDropoff.getPlace();
+                    if (!place.geometry) return;
+
+                    if (manualDropoffMarker) manualDropoffMarker.setMap(null);
+                    manualDropoffMarker = new google.maps.Marker({
+                        position: place.geometry.location,
+                        map: manualMap,
+                        icon: { path: google.maps.SymbolPath.CIRCLE, scale: 7, fillColor: '#ef4444', fillOpacity: 1, strokeWeight: 2, strokeColor: '#fff' }
+                    });
+
+                    if (!manualPickupInput.value) {
+                        manualMap.setCenter(place.geometry.location);
+                        manualMap.setZoom(14);
+                        manualDirectionsRenderer.setDirections({routes: []}); // Clear route
+                    } else {
+                        drawManualRoute();
+                    }
+                });
+            }
+
+            const drawManualRoute = () => {
+                if (acManualPickup && acManualDropoff && manualPickupInput.value && manualDropoffInput.value) {
+                    const placeA = acManualPickup.getPlace();
+                    const placeB = acManualDropoff.getPlace();
+                    if (placeA && placeA.geometry && placeB && placeB.geometry) {
+                        manualDirectionsService.route({
+                            origin: placeA.geometry.location,
+                            destination: placeB.geometry.location,
+                            travelMode: google.maps.TravelMode.DRIVING
+                        }, (response, status) => {
+                            if (status === 'OK') {
+                                manualDirectionsRenderer.setDirections(response);
+                                // Markers will be drawn by us, so we suppress them in DirectionsRenderer
+                            } else {
+                                console.error('Directions request failed due to ' + status);
+                            }
+                        });
+                    }
+                }
+            };
+
+            // Re-trigger resize when modal opens in case it was initialized while hidden
+            document.getElementById('addManualTripModal').addEventListener('shown.bs.modal', function () {
+                if (manualMap) {
+                    google.maps.event.trigger(manualMap, 'resize');
+                    if (manualPickupMarker) manualMap.setCenter(manualPickupMarker.getPosition());
+                }
+            });
         };
 
         const btnTraffic = document.getElementById('btn-traffic');
@@ -913,6 +1103,203 @@
         })
         .catch(console.error);
     };
+
+    // Manual Customer Search Logic
+    document.addEventListener('DOMContentLoaded', () => {
+        const searchInput = document.getElementById('manual-customer-search');
+        const resultsBox = document.getElementById('customer-search-results');
+        
+        if (searchInput) {
+            let debounceTimer;
+            searchInput.addEventListener('input', (e) => {
+                clearTimeout(debounceTimer);
+                const q = e.target.value.trim();
+                
+                if (q.length < 2) {
+                    resultsBox.style.display = 'none';
+                    return;
+                }
+                
+                debounceTimer = setTimeout(() => {
+                    fetch(`<?= base_url('customers/search') ?>?q=${encodeURIComponent(q)}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        resultsBox.innerHTML = '';
+                        if (data.length === 0) {
+                            resultsBox.innerHTML = '<div class="px-3 py-2 text-muted" style="font-size:0.8rem;">No customers found.</div>';
+                        } else {
+                            data.forEach(c => {
+                                const a = document.createElement('a');
+                                a.className = 'dropdown-item py-2';
+                                a.href = 'javascript:void(0)';
+                                a.style.fontSize = '0.8rem';
+                                a.innerHTML = `<strong>${c.first_name} ${c.last_name}</strong><br><span class="text-muted">${c.phone}</span>`;
+                                a.onclick = () => {
+                                    // Set customer manually
+                                    document.getElementById('customer-empty').style.display = 'none';
+                                    document.getElementById('customer-section').style.display = 'block';
+                                    
+                                    document.getElementById('input-customer-id').value = c.id;
+                                    document.getElementById('driver-empty').style.display = 'block';
+                                    document.getElementById('driver-section').style.display = 'none';
+                                    
+                                    document.getElementById('prof-name').innerText = c.first_name + ' ' + c.last_name;
+                                    document.getElementById('prof-phone').innerText = c.phone;
+                                    document.getElementById('prof-avatar').innerText = (c.first_name[0] || '') + (c.last_name[0] || '');
+                                    document.getElementById('prof-vip').style.display = 'none'; // Mocked
+                                    
+                                    document.getElementById('input-notes').value = "Manual trip for " + c.first_name;
+                                    searchInput.value = '';
+                                    resultsBox.style.display = 'none';
+                                };
+                                resultsBox.appendChild(a);
+                            });
+                        }
+                        resultsBox.style.display = 'block';
+                    })
+                    .catch(console.error);
+                }, 300);
+            });
+            
+            // Hide on outside click
+            document.addEventListener('click', (ev) => {
+                if (!searchInput.contains(ev.target) && !resultsBox.contains(ev.target)) {
+                    resultsBox.style.display = 'none';
+                }
+            });
+        }
+    });
+    // Add Customer AJAX
+    const formAddCustomer = document.getElementById('form-add-customer');
+    if (formAddCustomer) {
+        formAddCustomer.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btn-save-customer');
+            btn.disabled = true;
+            btn.innerText = 'Saving...';
+            
+            const formData = new FormData(formAddCustomer);
+            fetch('<?= base_url('customers/create_ajax') ?>', {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    bootstrap.Modal.getInstance(document.getElementById('addCustomerModal')).hide();
+                    alert('Customer added successfully!');
+                    formAddCustomer.reset();
+                    // Optional: auto-select customer
+                    const searchInput = document.getElementById('manual-customer-search');
+                    if (searchInput) {
+                        searchInput.value = data.customer.phone;
+                        searchInput.dispatchEvent(new Event('input'));
+                    }
+                } else {
+                    alert('Error: ' + (data.message || Object.values(data.errors).join(', ')));
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('Communication error');
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.innerText = 'Save Customer';
+            });
+        });
+    }
+
+    // Add Driver AJAX
+    const formAddDriver = document.getElementById('form-add-driver');
+    if (formAddDriver) {
+        formAddDriver.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btn-save-driver');
+            btn.disabled = true;
+            btn.innerText = 'Saving...';
+            
+            const formData = new FormData(formAddDriver);
+            fetch('<?= base_url('drivers/create_ajax') ?>', {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    bootstrap.Modal.getInstance(document.getElementById('addDriverModal')).hide();
+                    alert('Driver added successfully! Please refresh or assign via lists.');
+                    formAddDriver.reset();
+                } else {
+                    alert('Error: ' + (data.message || Object.values(data.errors).join(', ')));
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('Communication error');
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.innerText = 'Save Driver';
+            });
+        });
+    }
+
+    // Add Manual Trip Logic
+    const formAddManualTrip = document.getElementById('form-add-manual-trip');
+    if (formAddManualTrip) {
+        formAddManualTrip.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btn-save-manual-trip');
+            btn.disabled = true;
+            btn.innerHTML = '<i data-lucide="loader" width="16" class="spin"></i> Dispatching...';
+            lucide.createIcons();
+
+            let customerId = document.getElementById('manual-trip-customer').value;
+            let driverId = document.getElementById('manual-trip-driver').value;
+
+            // Dispatch Trip
+            const now = new Date();
+            const tripPayload = {
+                customer_id: customerId,
+                driver_id: driverId || null,
+                pickup_address: document.getElementById('manual-trip-pickup').value,
+                dropoff_address: document.getElementById('manual-trip-dropoff').value,
+                vehicle_type: document.getElementById('manual-trip-vehicle').value,
+                scheduled_at: now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0') + ' ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0') + ':00',
+                notes: document.getElementById('manual-trip-notes').value,
+                fare_amount: 15.00, // mock fare
+                distance_miles: 5.0 // mock distance
+            };
+
+            fetch('<?= base_url('dispatch/trips/create') ?>', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                body: JSON.stringify(tripPayload)
+            }).then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert("Quick Dispatch Trip #" + data.trip_number + " created successfully!");
+                    location.reload();
+                } else {
+                    alert("Error: " + (data.errors ? Object.values(data.errors).join(', ') : data.message));
+                    btn.disabled = false;
+                    btn.innerHTML = '<i data-lucide="zap" width="16"></i> Dispatch Trip';
+                    lucide.createIcons();
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('A communication error occurred. Check browser console.');
+                btn.disabled = false;
+                btn.innerHTML = '<i data-lucide="zap" width="16"></i> Dispatch Trip';
+                lucide.createIcons();
+            });
+        });
+    }
+
 </script>
 
     <!-- RATING MODAL -->
@@ -949,5 +1336,345 @@
             </div>
         </div>
     </div>
+
+    <!-- ADD CUSTOMER MODAL -->
+    <div class="modal fade" id="addCustomerModal" tabindex="-1" style="z-index: 2000;">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+                <div class="modal-header border-0 pb-0 pt-4 px-4">
+                    <h5 class="modal-title fw-800">Add Customer</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <form id="form-add-customer">
+                        <div class="premium-input-group mb-3">
+                            <label>First Name</label>
+                            <input type="text" name="first_name" class="form-control border-0 bg-light-subtle" required>
+                        </div>
+                        <div class="premium-input-group mb-3">
+                            <label>Last Name</label>
+                            <input type="text" name="last_name" class="form-control border-0 bg-light-subtle" required>
+                        </div>
+                        <div class="premium-input-group mb-3">
+                            <label>Phone</label>
+                            <input type="text" name="phone" class="form-control border-0 bg-light-subtle" required>
+                        </div>
+                        <div class="premium-input-group mb-4">
+                            <label>Email (Optional)</label>
+                            <input type="email" name="email" class="form-control border-0 bg-light-subtle">
+                        </div>
+                        <button type="submit" id="btn-save-customer" class="btn btn-primary w-100 py-2 fw-800" style="border-radius: 12px;">Save Customer</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADD DRIVER MODAL -->
+    <div class="modal fade" id="addDriverModal" tabindex="-1" style="z-index: 2000;">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+                <div class="modal-header border-0 pb-0 pt-4 px-4">
+                    <h5 class="modal-title fw-800">Add Driver</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <form id="form-add-driver">
+                        <div class="premium-input-group mb-3">
+                            <label>First Name</label>
+                            <input type="text" name="first_name" class="form-control border-0 bg-light-subtle" required>
+                        </div>
+                        <div class="premium-input-group mb-3">
+                            <label>Last Name</label>
+                            <input type="text" name="last_name" class="form-control border-0 bg-light-subtle" required>
+                        </div>
+                        <div class="premium-input-group mb-3">
+                            <label>Phone</label>
+                            <input type="text" name="phone" class="form-control border-0 bg-light-subtle" required>
+                        </div>
+                        <div class="premium-input-group mb-4">
+                            <label>Vehicle Make & Model (Optional)</label>
+                            <input type="text" name="vehicle_model" class="form-control border-0 bg-light-subtle">
+                        </div>
+                        <button type="submit" id="btn-save-driver" class="btn btn-primary w-100 py-2 fw-800" style="border-radius: 12px;">Save Driver</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- QUICK DISPATCH MODAL (ADD MANUAL TRIP) -->
+    <div class="modal fade" id="addManualTripModal" tabindex="-1" style="z-index: 2000;">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 550px;">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
+                <!-- Header -->
+                <div class="modal-header border-bottom p-4 align-items-center" style="background: #fff;">
+                    <div class="d-flex align-items-center gap-3">
+                        <div style="width: 40px; height: 40px; border-radius: 8px; background: #eef2ff; color: #4f46e5; display: flex; align-items: center; justify-content: center;">
+                            <i data-lucide="zap" width="20"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title mb-0" style="font-weight: 700; color: #1e293b; font-size: 1.1rem;">Quick Dispatch</h5>
+                            <div style="font-size: 0.8rem; color: #64748b; margin-top: 2px;">Create and dispatch a new trip</div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <!-- Body -->
+                <div class="modal-body p-4" style="background: #fff;">
+                    <form id="form-add-manual-trip">
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold" style="font-size: 0.85rem; color: #1e293b;">Customer <span class="text-danger">*</span></label>
+                            <select id="manual-trip-customer" class="form-select" style="border-radius: 8px; border-color: #cbd5e1; padding: 10px 12px; font-size: 0.9rem;" required>
+                                <option value="">-- Select Customer --</option>
+                                <?php if(isset($customers)): foreach($customers as $c): ?>
+                                    <option value="<?= $c->id ?>"><?= esc($c->first_name . ' ' . $c->last_name . ' (' . $c->phone . ')') ?></option>
+                                <?php endforeach; endif; ?>
+                            </select>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <label class="form-label fw-bold" style="font-size: 0.85rem; color: #1e293b;">
+                                    <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10b981; margin-right:4px;"></span> Pickup Address <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" id="manual-trip-pickup" class="form-control" placeholder="Type or select pickup..." style="border-radius: 8px; border-color: #cbd5e1; padding: 10px 12px; font-size: 0.9rem;" required>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label fw-bold" style="font-size: 0.85rem; color: #1e293b;">
+                                    <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#ef4444; margin-right:4px;"></span> Dropoff Address <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" id="manual-trip-dropoff" class="form-control" placeholder="Type or select dropoff..." style="border-radius: 8px; border-color: #cbd5e1; padding: 10px 12px; font-size: 0.9rem;" required>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <label class="form-label fw-bold" style="font-size: 0.85rem; color: #1e293b;">Vehicle Type</label>
+                                <select id="manual-trip-vehicle" class="form-select" style="border-radius: 8px; border-color: #cbd5e1; padding: 10px 12px; font-size: 0.9rem;">
+                                    <option value="Sedan (Standard)">Sedan (Standard)</option>
+                                    <option value="SUV">SUV</option>
+                                    <option value="Van">Van</option>
+                                    <option value="Luxury">Luxury</option>
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label fw-bold" style="font-size: 0.85rem; color: #1e293b;">Payment Method</label>
+                                <select id="manual-trip-payment" class="form-select" style="border-radius: 8px; border-color: #cbd5e1; padding: 10px 12px; font-size: 0.9rem;">
+                                    <option value="Cash">Cash</option>
+                                    <option value="Card">Card</option>
+                                    <option value="Wallet">Wallet</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold" style="font-size: 0.85rem; color: #1e293b;">Assign Driver <span style="font-weight:normal; color:#64748b;">(optional)</span></label>
+                            <select id="manual-trip-driver" class="form-select" style="border-radius: 8px; border-color: #cbd5e1; padding: 10px 12px; font-size: 0.9rem;">
+                                <option value="">-- Assign Later --</option>
+                                <?php if(isset($drivers)): foreach($drivers as $d): ?>
+                                    <option value="<?= $d->id ?>"><?= esc($d->first_name . ' ' . $d->last_name) ?></option>
+                                <?php endforeach; endif; ?>
+                            </select>
+                        </div>
+
+                        <div class="row mb-2">
+                            <div class="col-4">
+                                <label class="form-label fw-bold" style="font-size: 0.85rem; color: #1e293b;">Passengers</label>
+                                <input type="number" id="manual-trip-passengers" class="form-control" value="1" min="1" style="border-radius: 8px; border-color: #cbd5e1; padding: 10px 12px; font-size: 0.9rem;">
+                            </div>
+                            <div class="col-8">
+                                <label class="form-label fw-bold" style="font-size: 0.85rem; color: #1e293b;">Notes <span style="font-weight:normal; color:#64748b;">(optional)</span></label>
+                                <input type="text" id="manual-trip-notes" class="form-control" placeholder="e.g. Fragile item, 2 stops" style="border-radius: 8px; border-color: #cbd5e1; padding: 10px 12px; font-size: 0.9rem;">
+                            </div>
+                        </div>
+                        
+                        <!-- Mini Map Container -->
+                        <div id="manual-trip-map-container" style="height: 150px; border-radius: 8px; border: 1px solid #cbd5e1; margin-bottom: 1rem; overflow: hidden; display: none;">
+                            <div id="manual-trip-map" style="width: 100%; height: 100%;"></div>
+                        </div>
+
+                </div>
+
+                <!-- Footer -->
+                <div class="modal-footer border-top p-3 d-flex justify-content-end align-items-center" style="background: #fff; gap: 12px;">
+                    <button type="button" class="btn text-dark fw-bold" data-bs-dismiss="modal" style="background: none; border: none; font-size: 0.95rem;">Cancel</button>
+                    <button type="submit" id="btn-save-manual-trip" class="btn btn-primary d-flex align-items-center gap-2 fw-bold" style="border-radius: 8px; padding: 10px 20px; font-size: 0.95rem; background-color: #1d4ed8; border-color: #1d4ed8;">
+                        <i data-lucide="zap" width="16"></i> Dispatch Trip
+                    </button>
+                </div>
+                    </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- TELNYX WEBRTC CALLING UI & SCRIPT -->
+    <div class="modal fade" id="incomingCallModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" style="z-index: 2500;">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden; background: #1e293b; color: white; text-align: center;">
+                <div class="modal-body p-5">
+                    <div style="width: 60px; height: 60px; border-radius: 50%; background: rgba(59, 130, 246, 0.2); color: #3b82f6; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; animation: pulse-ring 2s infinite;">
+                        <i data-lucide="phone-incoming" width="32"></i>
+                    </div>
+                    <h5 class="fw-800 mb-1">Incoming Call</h5>
+                    <p class="text-secondary mb-4" id="incoming-caller-id">Unknown Caller</p>
+                    
+                    <div class="d-flex justify-content-center gap-4 mt-4">
+                        <button class="btn btn-danger rounded-circle d-flex align-items-center justify-content-center" id="btn-reject-call" style="width: 55px; height: 55px; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);">
+                            <i data-lucide="phone-off"></i>
+                        </button>
+                        <button class="btn btn-success rounded-circle d-flex align-items-center justify-content-center" id="btn-answer-call" style="width: 55px; height: 55px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4); animation: bounce-call 2s infinite;">
+                            <i data-lucide="phone"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Call UI Panel (Floating) -->
+    <div id="activeCallPanel" class="shadow-lg" style="display: none; position: fixed; bottom: 30px; right: 30px; background: #1e293b; border-radius: 16px; padding: 20px; color: white; z-index: 2500; width: 320px; border: 1px solid rgba(255,255,255,0.1);">
+        <div class="d-flex justify-content-between align-items-center mb-3 border-bottom border-secondary pb-3">
+            <div class="d-flex align-items-center gap-2">
+                <div style="width: 10px; height: 10px; border-radius: 50%; background: #10b981; animation: pulse-ring 2s infinite;"></div>
+                <span class="fw-800" style="font-size: 0.9rem;">Call Active</span>
+            </div>
+            <span id="active-call-timer" class="font-monospace text-secondary fw-bold">00:00</span>
+        </div>
+        <div class="text-center mb-4 mt-2">
+            <h5 id="active-caller-id" class="mb-1 fw-bold">...</h5>
+            <div class="text-secondary" style="font-size: 0.8rem;">Connected</div>
+        </div>
+        <div class="d-flex justify-content-center gap-4">
+            <button class="btn btn-secondary rounded-circle d-flex align-items-center justify-content-center" id="btn-mute-call" style="width: 50px; height: 50px; background: #334155; border: none;">
+                <i data-lucide="mic-off"></i>
+            </button>
+            <button class="btn btn-danger rounded-circle d-flex align-items-center justify-content-center" id="btn-hangup-call" style="width: 50px; height: 50px; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);">
+                <i data-lucide="phone-off"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Hidden audio elements for ringing and voice -->
+    <audio id="telnyx-ringtone" loop src="https://assets.mixkit.co/active_storage/sfx/2870/2870-preview.mp3"></audio>
+    <audio id="telnyx-audio" autoplay></audio>
+
+    <script src="https://unpkg.com/@telnyx/webrtc"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const sipUsername = <?= json_encode($telnyxSipUsername ?? '') ?>;
+        const sipPassword = <?= json_encode($telnyxSipPassword ?? '') ?>;
+
+        if (!sipUsername || !sipPassword || sipUsername === 'YOUR_TELNYX_SIP_USERNAME') {
+            console.warn("Telnyx SIP credentials not configured. In-app calling disabled.");
+            return;
+        }
+
+        const client = new TelnyxRTC({
+            login: sipUsername,
+            password: sipPassword
+        });
+
+        client.connect();
+
+        let activeCall = null;
+        let callTimerInterval = null;
+        let callSeconds = 0;
+
+        const incomingCallModal = new bootstrap.Modal(document.getElementById('incomingCallModal'));
+        const activeCallPanel = document.getElementById('activeCallPanel');
+        const ringtone = document.getElementById('telnyx-ringtone');
+        const telnyxAudio = document.getElementById('telnyx-audio');
+
+        const formatTime = (sec) => {
+            const m = Math.floor(sec / 60).toString().padStart(2, '0');
+            const s = (sec % 60).toString().padStart(2, '0');
+            return `${m}:${s}`;
+        };
+
+        client.on('telnyx.notification', (notification) => {
+            const call = notification.call;
+
+            if (notification.type === 'callUpdate') {
+                if (call.state === 'ringing') {
+                    activeCall = call;
+                    document.getElementById('incoming-caller-id').innerText = call.options.remoteCallerName || call.options.remoteCallerNumber || 'Unknown Caller';
+                    incomingCallModal.show();
+                    ringtone.play().catch(e => console.log('Audio autoplay prevented'));
+                } else if (call.state === 'active') {
+                    activeCall = call;
+                    incomingCallModal.hide();
+                    ringtone.pause();
+                    ringtone.currentTime = 0;
+                    
+                    document.getElementById('active-caller-id').innerText = call.options.remoteCallerName || call.options.remoteCallerNumber || 'Unknown Caller';
+                    activeCallPanel.style.display = 'block';
+
+                    // Bind audio stream
+                    if (call.remoteStream) {
+                        telnyxAudio.srcObject = call.remoteStream;
+                    }
+
+                    // Start timer
+                    callSeconds = 0;
+                    document.getElementById('active-call-timer').innerText = '00:00';
+                    clearInterval(callTimerInterval);
+                    callTimerInterval = setInterval(() => {
+                        callSeconds++;
+                        document.getElementById('active-call-timer').innerText = formatTime(callSeconds);
+                    }, 1000);
+
+                } else if (call.state === 'hangup' || call.state === 'destroy') {
+                    incomingCallModal.hide();
+                    activeCallPanel.style.display = 'none';
+                    ringtone.pause();
+                    ringtone.currentTime = 0;
+                    telnyxAudio.srcObject = null;
+                    clearInterval(callTimerInterval);
+                    activeCall = null;
+                }
+            }
+        });
+
+        document.getElementById('btn-answer-call').addEventListener('click', () => {
+            if (activeCall) {
+                activeCall.answer();
+            }
+        });
+
+        document.getElementById('btn-reject-call').addEventListener('click', () => {
+            if (activeCall) {
+                activeCall.hangup();
+            }
+        });
+
+        document.getElementById('btn-hangup-call').addEventListener('click', () => {
+            if (activeCall) {
+                activeCall.hangup();
+            }
+        });
+
+        let isMuted = false;
+        document.getElementById('btn-mute-call').addEventListener('click', function() {
+            if (activeCall) {
+                if (isMuted) {
+                    activeCall.unmuteAudio();
+                    this.classList.remove('btn-danger');
+                    this.classList.add('btn-secondary');
+                    this.innerHTML = '<i data-lucide="mic-off"></i>';
+                } else {
+                    activeCall.muteAudio();
+                    this.classList.remove('btn-secondary');
+                    this.classList.add('btn-danger');
+                    this.innerHTML = '<i data-lucide="mic"></i>';
+                }
+                isMuted = !isMuted;
+                lucide.createIcons();
+            }
+        });
+    });
+    </script>
 
 <?= $this->endSection() ?>

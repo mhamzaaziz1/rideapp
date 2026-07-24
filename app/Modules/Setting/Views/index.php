@@ -438,6 +438,15 @@
                                 <label class="form-label">Public Key <span style="font-size:0.7rem; color:var(--text-secondary); font-weight:normal;">(for webhook verification)</span></label>
                                 <input type="text" class="form-input" name="telnyx_public_key" value="<?= $settings['telnyx_public_key'] ?? '' ?>" placeholder="Public key for signature verification">
                             </div>
+                            <div class="form-group">
+                                <label class="form-label">SIP Username <span style="font-size:0.7rem; color:var(--text-secondary); font-weight:normal;">(for WebRTC Voice)</span></label>
+                                <input type="text" class="form-input" name="telnyx_sip_username" value="<?= $settings['telnyx_sip_username'] ?? '' ?>" placeholder="e.g. user_123">
+                                <div class="form-help">Found in Telnyx Portal → Voice → SIP Connections.</div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">SIP Password <span style="font-size:0.7rem; color:var(--text-secondary); font-weight:normal;">(for WebRTC Voice)</span></label>
+                                <input type="password" class="form-input" name="telnyx_sip_password" value="<?= $settings['telnyx_sip_password'] ?? '' ?>" placeholder="SIP Password">
+                            </div>
                             <div style="background:rgba(0,196,143,0.08); padding:1rem; border-radius:8px; border-left:3px solid #00c48f; margin-top:1rem;">
                                 <div style="font-size:0.8rem; font-weight:600; color:#00c48f; margin-bottom:4px;">📥 Inbound SMS Webhook</div>
                                 <div style="display:flex; align-items:center; gap:8px;">
@@ -445,6 +454,15 @@
                                     <button type="button" onclick="copyWebhookUrl('telnyx-webhook-url', this)" style="background:none; border:1px solid var(--border-color); border-radius:4px; padding:4px 8px; cursor:pointer; font-size:0.7rem; color:var(--text-secondary); white-space:nowrap;" title="Copy URL"><i data-lucide="copy" width="12"></i></button>
                                 </div>
                                 <div style="font-size:0.7rem; color:var(--text-secondary); margin-top:4px;">Set this URL in your Telnyx Messaging Profile → Inbound Settings → Webhook URL.</div>
+                            </div>
+                            
+                            <div style="background:rgba(59,130,246,0.08); padding:1rem; border-radius:8px; border-left:3px solid #3b82f6; margin-top:1rem;">
+                                <div style="font-size:0.8rem; font-weight:600; color:#3b82f6; margin-bottom:4px;">📞 Inbound Voice Webhook (Call Control)</div>
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <code id="telnyx-voice-webhook-url" style="font-size:0.75rem; color:var(--text-secondary); word-break:break-all; flex:1;"><?= base_url('voice/webhook/telnyx') ?></code>
+                                    <button type="button" onclick="copyWebhookUrl('telnyx-voice-webhook-url', this)" style="background:none; border:1px solid var(--border-color); border-radius:4px; padding:4px 8px; cursor:pointer; font-size:0.7rem; color:var(--text-secondary); white-space:nowrap;" title="Copy URL"><i data-lucide="copy" width="12"></i></button>
+                                </div>
+                                <div style="font-size:0.7rem; color:var(--text-secondary); margin-top:4px;">Set this URL in your Telnyx Call Control Application → Webhook URL.</div>
                             </div>
                         </div>
                     </div>

@@ -79,6 +79,31 @@ class CustomerController extends BaseController
         return redirect()->to('/customers')->with('success', 'Customer created successfully');
     }
 
+    public function createAjax()
+    {
+        $rules = [
+            'first_name' => 'required|min_length[2]',
+            'last_name'  => 'required|min_length[2]',
+            'phone'      => 'required|min_length[10]',
+        ];
+
+        if (!$this->validate($rules)) {
+            return $this->response->setJSON(['status' => 'error', 'errors' => $this->validator->getErrors()]);
+        }
+
+        $data = $this->request->getPost();
+        $data['total_trips'] = 0;
+        $data['total_spent'] = 0;
+        $data['rating'] = 5.0;
+
+        if ($this->customerModel->insert($data)) {
+            $data['id'] = $this->customerModel->getInsertID();
+            return $this->response->setJSON(['status' => 'success', 'customer' => $data]);
+        }
+
+        return $this->response->setJSON(['status' => 'error', 'message' => 'Failed to create customer']);
+    }
+
     public function edit($id)
     {
         $customer = $this->customerModel->find($id);
@@ -327,6 +352,26 @@ class CustomerController extends BaseController
         ], $rows);
 
         return $this->response->setJSON(['addresses' => $addresses]);
+    }
+
+    /**
+     * JSON API - search customers by name or phone for autocomplete
+     */
+    public function search()
+    {
+        $q = $this->request->getGet('q');
+        if (empty($q)) {
+            return $this->response->setJSON([]);
+        }
+
+        $customers = $this->customerModel
+            ->like('phone', $q)
+            ->orLike('first_name', $q)
+            ->orLike('last_name', $q)
+            ->limit(10)
+            ->findAll();
+
+        return $this->response->setJSON($customers);
     }
 
     /**

@@ -81,7 +81,7 @@
     <div style="flex-shrink: 0; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; padding-top: 1rem;">
         <div>
             <h1 class="h3" style="margin:0;">Communication Center</h1>
-            <div style="color:var(--text-secondary); font-size:0.95rem;">Real-time log of all Twilio SMS and Automated Voice interactions.</div>
+            <div style="color:var(--text-secondary); font-size:0.95rem;">Real-time log of all SMS and Automated Voice interactions.</div>
         </div>
         <div>
             <a href="javascript:window.location.reload(true)" class="btn btn-outline" style="border-color: var(--primary); color: var(--primary); display: flex; align-items: center; gap: 6px;">
@@ -99,7 +99,7 @@
                 <div class="empty-state">
                     <i data-lucide="message-square-dashed" width="64" height="64"></i>
                     <h4 style="color: var(--text-primary);">No Communications</h4>
-                    <p>No Twilio communications have been logged yet. Check your webhooks!</p>
+                    <p>No communications have been logged yet. Check your webhooks!</p>
                 </div>
             <?php else: ?>
                 <?php foreach($logs as $log): ?>

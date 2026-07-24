@@ -74,12 +74,20 @@ class DispatchController extends BaseController
             ];
         }
 
+        $settingsFile = WRITEPATH . 'settings.json';
+        $settings = [];
+        if (file_exists($settingsFile)) {
+            $settings = json_decode(file_get_contents($settingsFile), true) ?? [];
+        }
+
         return view('App\Modules\Dispatch\Views\dashboard', [
             'title' => 'Dispatch Console',
             'activeTrips' => $activeTrips,
             'drivers' => $drivers,
             'customers' => $customers,
-            'calls' => $calls
+            'calls' => $calls,
+            'telnyxSipUsername' => !empty($settings['telnyx_sip_username']) ? $settings['telnyx_sip_username'] : getenv('TELNYX_SIP_USERNAME'),
+            'telnyxSipPassword' => !empty($settings['telnyx_sip_password']) ? $settings['telnyx_sip_password'] : getenv('TELNYX_SIP_PASSWORD')
         ]);
     }
 

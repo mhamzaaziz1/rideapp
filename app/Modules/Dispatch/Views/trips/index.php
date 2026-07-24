@@ -3,200 +3,198 @@
 <?= $this->section('content') ?>
 
 <style>
-    /* Layout Grid: Content + Sidebar */
-    .dispatch-layout {
-        display: flex;
-        flex-direction: column;
-        gap: 1.5rem;
-        flex: 1; /* Allow to fill remaining space in the viewport */
-        min-height: 0; /* Important for flex children to be scrollable */
-        overflow: hidden;
+    :root {
+        --bg-body-new: #f8f9fc;
+        --border-light: #e5e7eb;
+        --text-dark: #111827;
+        --text-gray: #6b7280;
+        --primary-blue: #3b82f6;
+        --primary-blue-hover: #2563eb;
+        --success-bg: #dcfce7;
+        --success-text: #166534;
+        --success-border: #bbf7d0;
+        --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
     }
-    .dispatch-main {
-        display: flex;
-        flex-direction: column;
-        flex: 1;
-        min-height: 0;
-        overflow: hidden; /* The actual scrolling will happen inside .tab-pane */
-    }
-    /* Sidebar removed as per simplification request */
+    
+    body { background-color: var(--bg-body-new); font-family: 'Inter', sans-serif; }
+    .main-content { background-color: var(--bg-body-new); }
 
-    /* Stats Bar (Compact) */
-    .stats-bar {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 1rem;
-        margin-bottom: 1.5rem;
+    /* Header */
+    .page-header {
+        display: flex; justify-content: space-between; align-items: flex-start;
+        margin-bottom: 2rem;
     }
-    .mini-stat {
-        background: var(--bg-surface);
-        border: 1px solid var(--border-color);
-        padding: 1rem;
-        border-radius: var(--radius-sm);
-        display: flex; align-items: center; justify-content: space-between;
-    }
-    .mini-stat-label { font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
-    .mini-stat-val { font-size: 1.25rem; font-weight: 700; color: var(--text-primary); }
-
-    /* Tabs */
-    .tabs-nav {
-        display: flex;
-        border-bottom: 1px solid var(--border-color);
-        margin-bottom: 1rem;
-        background: var(--bg-surface);
-        border-radius: var(--radius-sm);
-        padding: 0 0.5rem;
-    }
-    .tab-btn {
-        padding: 1rem 1.5rem;
-        background: none;
-        border: none;
-        border-bottom: 2px solid transparent;
-        color: var(--text-secondary);
-        font-weight: 600;
+    .page-title { font-size: 1.75rem; font-weight: 700; color: var(--text-dark); margin-bottom: 0.25rem; }
+    .page-desc { color: var(--text-gray); font-size: 0.95rem; }
+    
+    .btn-add {
+        background-color: var(--primary-blue); color: white;
+        border-radius: 8px; padding: 0.6rem 1.25rem; font-weight: 600;
+        display: inline-flex; align-items: center; gap: 0.5rem; border: none;
+        box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+        transition: background 0.2s;
         cursor: pointer;
-        position: relative;
-    }
-    .tab-btn:hover { color: var(--text-primary); }
-    .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
-    .tab-badge {
-        background: var(--danger); color: white;
-        font-size: 0.7rem; padding: 2px 6px; border-radius: 10px;
-        margin-left: 6px;
-    }
-
-    /* Tab Content - Scalable Lists */
-    .tab-pane { display: none; flex: 1; overflow-y: auto; padding-right: 4px; min-height: 0; }
-    .tab-pane.active { display: flex; flex-direction: column; }
-    
-    /* Trip Item (Premium Card) */
-    .trip-wrapper {
-        margin-bottom: 0.75rem;
-        background: var(--bg-surface);
-        border: 1px solid var(--border-color);
-        border-radius: var(--radius-sm);
-        transition: all 0.2s;
-        position: relative;
-        z-index: 1;
-    }
-    .trip-wrapper:hover {
-        border-color: var(--primary);
-        box-shadow: var(--shadow-sm);
-    }
-    .trip-card {
-        padding: 1rem;
-        display: grid;
-        grid-template-columns: 40px 80px 1.5fr 1.25fr 100px 130px; /* Checkbox, Status, Route, Customer/Driver, Price, Action */
-        gap: 1rem;
-        align-items: center;
-        cursor: pointer;
-    }
-    
-    .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
-    
-    .route-visual { position: relative; padding-left: 1.5rem; }
-    .route-visual::before {
-        content:''; position: absolute; left: 6px; top: 6px; bottom: 6px; width: 2px; background: var(--border-color);
-    }
-    .route-point { font-size: 0.85rem; margin-bottom: 4px; display: flex; align-items: center; }
-    .route-icon { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--bg-surface); margin-right: 8px; position: absolute; left: 0; }
-    
-    /* Sidebar Styles */
-    .sidebar-header { padding: 1rem; border-bottom: 1px solid var(--border-color); font-weight: 700; display: flex; justify-content: space-between; align-items: center; }
-    .driver-list-item {
-        padding: 0.75rem 1rem;
-        border-bottom: 1px solid var(--border-color);
-        display: flex; align-items: center; gap: 0.75rem;
-    }
-    .driver-status { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
-    .driver-avatar-sm { width: 32px; height: 32px; border-radius: 50%; background: var(--bg-surface-hover); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 600; }
-
-    /* Dropdown Styles */
-    .dropdown { position: relative; display: inline-block; }
-    .dropdown-menu {
-        display: none; position: absolute; right: 0; top: 100%; margin-top: 4px;
-        background-color: var(--bg-surface);
-        min-width: 160px;
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-        border: 1px solid var(--border-color);
-        border-radius: var(--radius-sm);
-        z-index: 100;
-        padding: 4px 0;
-        transform-origin: top right;
-        animation: dropdownFadeIn 0.2s ease-out;
-    }
-    @keyframes dropdownFadeIn {
-        from { opacity: 0; transform: scale(0.95); }
-        to { opacity: 1; transform: scale(1); }
-    }
-    .dropdown-menu.show { display: block; }
-    .dropdown-item {
-        display: flex; align-items: center; gap: 10px;
-        padding: 10px 16px;
-        font-size: 0.875rem;
-        color: var(--text-primary);
         text-decoration: none;
-        cursor: pointer;
-        transition: all 0.2s;
-        border: none; background: none; width: 100%; text-align: left;
-        font-weight: 500;
     }
-    .dropdown-item:hover { background-color: var(--bg-surface-hover); padding-left: 20px; }
-    .dropdown-item i { stroke-width: 1.5px; opacity: 0.6; }
-    .dropdown-item.text-danger { color: var(--danger); }
-    .dropdown-item.text-danger:hover { background-color: rgba(239, 68, 68, 0.05); }
+    .btn-add:hover { background-color: var(--primary-blue-hover); color: white; text-decoration: none; }
 
-    /* Modal Animations */
-    .modal-overlay {
-        animation: fadeIn 0.3s ease-out;
+    /* Stats Cards */
+    .stats-container {
+        display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.25rem; margin-bottom: 2rem;
     }
-    .modal-content {
-        animation: slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    .stat-card {
+        background: #ffffff; border-radius: 12px; padding: 1.5rem;
+        box-shadow: var(--shadow-card); border: 1px solid var(--border-light);
+        display: flex; flex-direction: column; position: relative;
     }
+    .stat-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+    .stat-title { font-size: 0.95rem; font-weight: 600; color: var(--text-dark); }
+    .stat-icon {
+        width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    }
+    .icon-blue { background: #eff6ff; color: #3b82f6; }
+    .icon-orange { background: #fff7ed; color: #f97316; }
+    .icon-green { background: #f0fdf4; color: #22c55e; }
+    .icon-purple { background: #f3e8ff; color: #a855f7; }
+    .stat-value { font-size: 2rem; font-weight: 700; color: var(--text-dark); line-height: 1.2; }
+    .stat-sub { font-size: 0.8rem; color: var(--text-gray); display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; }
+    .mini-chart { flex-grow: 1; height: 2px; background: #cbd5e1; border-radius: 2px; position: relative; }
+    .mini-chart::after { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 60%; background: var(--primary-blue); border-radius: 2px; }
+
+    /* Table Container */
+    .table-container {
+        background: #ffffff; border-radius: 12px; box-shadow: var(--shadow-card); border: 1px solid var(--border-light); padding: 1.5rem;
+    }
+
+    /* Toolbar */
+    .toolbar { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; }
+    .search-wrapper { position: relative; width: 320px; }
+    .search-input {
+        width: 100%; padding: 0.6rem 1rem 0.6rem 2.5rem; border: 1px solid var(--border-light);
+        border-radius: 8px; font-size: 0.95rem; color: var(--text-dark); background: white;
+    }
+    .search-icon { position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: var(--text-gray); }
+    .filter-input {
+        padding: 0.6rem 1rem; border: 1px solid var(--border-light);
+        border-radius: 8px; font-size: 0.95rem; color: var(--text-dark); background: white; height: 42px;
+    }
+    
+    .toolbar-actions { display: flex; gap: 0.75rem; }
+    .btn-outline-action {
+        border: 1px solid var(--border-light); background: #ffffff; color: var(--text-dark);
+        border-radius: 8px; padding: 0.6rem 1rem; font-size: 0.9rem; font-weight: 600;
+        display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; transition: background 0.2s;
+    }
+    .btn-outline-action:hover { background: #f8fafc; }
+
+    /* Table */
+    .custom-table { width: 100%; border-collapse: collapse; }
+    .custom-table th { 
+        text-align: left; padding: 1rem 0.5rem; font-size: 0.85rem; font-weight: 700; color: var(--text-dark); 
+        border-bottom: 1px solid var(--border-light); border-top: 1px solid var(--border-light);
+    }
+    .custom-table td { padding: 1.25rem 0.5rem; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+    .custom-table tr:last-child td { border-bottom: none; }
+    .custom-table tr:hover { background: #f8fafc; cursor: pointer; }
+    
+    .text-muted { color: var(--text-gray); font-size: 0.85rem; }
+    
+    .status-badge {
+        display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.75rem;
+        border-radius: 16px; font-size: 0.8rem; font-weight: 600; cursor: pointer; text-transform: capitalize;
+    }
+    .status-active, .status-completed { background: var(--success-bg); color: var(--success-text); border: 1px solid var(--success-border); }
+    .status-pending { background: #fef08a; color: #854d0e; border: 1px solid #fef08a; }
+    .status-dispatching { background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; }
+    .status-cancelled { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+    
+    /* Tabs */
+    .tabs-nav { display: flex; border-bottom: 1px solid var(--border-light); margin-bottom: 1.5rem; }
+    .tab-btn { padding: 0.75rem 1.5rem; background: none; border: none; font-weight: 600; color: var(--text-gray); cursor: pointer; border-bottom: 2px solid transparent; }
+    .tab-btn.active { color: var(--primary-blue); border-bottom-color: var(--primary-blue); }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+    .tab-badge { background: #cbd5e1; color: white; padding: 2px 6px; border-radius: 12px; font-size: 0.75rem; margin-left: 6px; }
+
+    /* Modals & Dropdowns from original */
+    .dropdown { position: relative; display: inline-block; }
+    .dropdown-menu { display: none; position: absolute; right: 0; top: 100%; margin-top: 4px; background-color: #fff; min-width: 160px; box-shadow: var(--shadow-card); border: 1px solid var(--border-light); border-radius: 8px; z-index: 100; padding: 4px 0; }
+    .dropdown-menu.show { display: block; }
+    .dropdown-item { display: flex; align-items: center; gap: 10px; padding: 10px 16px; font-size: 0.875rem; color: var(--text-dark); text-decoration: none; cursor: pointer; border: none; background: none; width: 100%; text-align: left; font-weight: 500; }
+    .dropdown-item:hover { background-color: #f8fafc; }
+    .dropdown-item.text-danger { color: #ef4444; }
+    
+    .modal-overlay { animation: fadeIn 0.3s ease-out; }
+    .modal-content { animation: slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-    @keyframes slideUp { 
-        from { opacity: 0; transform: translateY(20px) scale(0.95); } 
-        to { opacity: 1; transform: translateY(0) scale(1); } 
-    }
-
-    /* Rating Star Styles */
-    .modal-star {
-        cursor: pointer;
-        transition: all 0.2s;
-        color: var(--text-tertiary);
-    }
-    .modal-star:hover, .modal-star.active {
-        color: var(--warning);
-        transform: scale(1.1);
-    }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(20px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    .modal-star { cursor: pointer; transition: all 0.2s; color: #cbd5e1; }
+    .modal-star:hover, .modal-star.active { color: #eab308; transform: scale(1.1); }
 </style>
 
-<div style="padding: 1.5rem; height: 100vh; overflow: hidden; display: flex; flex-direction: column;">
-    <!-- Top Header -->
-    <div style="flex-shrink: 0; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+<div style="padding: 2.5rem;">
+    
+    <div class="page-header">
         <div>
-            <h1 class="h3" style="margin:0;">Dispatch Board</h1>
-            <div style="color:var(--text-secondary); font-size:0.9rem;">Live Operations Console</div>
+            <h1 class="page-title">Dispatch Board</h1>
+            <div class="page-desc">Live Operations Console</div>
         </div>
         <div style="display: flex; gap: 0.75rem;">
-            <button onclick="openQuickDispatchModal()" class="btn btn-primary">
-                <i data-lucide="zap" width="16" style="margin-right:6px;"></i> Dispatch
+            <button onclick="openQuickDispatchModal()" class="btn-add">
+                <i data-lucide="zap" width="16"></i> Dispatch
             </button>
         </div>
     </div>
 
     <!-- Main Layout -->
-    <div class="dispatch-layout">
-        <div class="dispatch-main">
-            <!-- Filters -->
-            <div style="padding: 1rem; background: var(--bg-surface); border-bottom: 1px solid var(--border-color); margin-bottom: 1rem;">
-                <form id="filterForm" action="<?= base_url('dispatch/trips') ?>" method="get" style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-                    <div style="flex: 1; min-width: 200px;">
-                        <input type="text" name="search" class="form-control" placeholder="Search trip #, address, name..." value="<?= esc($filters['search'] ?? '') ?>" style="width: 100%; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 4px;">
+    <div>
+        <div>
+            <!-- Stats -->
+            <div class="stats-container">
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-title">Pending</div>
+                        <div class="stat-icon icon-orange"><i data-lucide="clock" width="18"></i></div>
                     </div>
-                    
-                    <div style="width: 150px;">
-                        <select name="status" class="form-control" style="width: 100%; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 4px;">
+                    <div class="stat-value"><?= count($trips_queue) ?></div>
+                    <div class="stat-sub">Awaiting assignment <div class="mini-chart"></div></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-title">Active</div>
+                        <div class="stat-icon icon-blue"><i data-lucide="activity" width="18"></i></div>
+                    </div>
+                    <div class="stat-value"><?= count($trips_active) ?></div>
+                    <div class="stat-sub">Currently en-route <div class="mini-chart"></div></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-title">Completed (Today)</div>
+                        <div class="stat-icon icon-green"><i data-lucide="check-circle" width="18"></i></div>
+                    </div>
+                    <div class="stat-value"><?= count(array_filter($trips_history, fn($t) => $t->status == 'completed')) ?></div>
+                    <div class="stat-sub">Successfully finished <div class="mini-chart"></div></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-title">Total Trips</div>
+                        <div class="stat-icon icon-purple"><i data-lucide="map" width="18"></i></div>
+                    </div>
+                    <div class="stat-value"><?= count($trips_all) ?></div>
+                    <div class="stat-sub">All time <div class="mini-chart"></div></div>
+                </div>
+            </div>
+
+            <!-- Filters & Tabs Container -->
+            <div class="table-container">
+                
+                <form id="filterForm" action="<?= base_url('dispatch/trips') ?>" method="get" class="toolbar" style="margin-bottom:0;">
+                    <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items:center;">
+                        <div class="search-wrapper">
+                            <i data-lucide="search" width="16" class="search-icon"></i>
+                            <input type="text" name="search" class="search-input" placeholder="Search trip #, address..." value="<?= esc($filters['search'] ?? '') ?>">
+                        </div>
+                        <select name="status" class="filter-input">
                             <option value="">All Statuses</option>
                             <option value="pending" <?= ($filters['status'] == 'pending') ? 'selected' : '' ?>>Pending</option>
                             <option value="dispatching" <?= ($filters['status'] == 'dispatching') ? 'selected' : '' ?>>Dispatching</option>
@@ -204,10 +202,7 @@
                             <option value="completed" <?= ($filters['status'] == 'completed') ? 'selected' : '' ?>>Completed</option>
                             <option value="cancelled" <?= ($filters['status'] == 'cancelled') ? 'selected' : '' ?>>Cancelled</option>
                         </select>
-                    </div>
-
-                    <div style="width: 180px;">
-                        <select name="driver_id" class="form-control" style="width: 100%; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 4px;">
+                        <select name="driver_id" class="filter-input">
                             <option value="">All Drivers</option>
                             <?php foreach($drivers as $d): ?>
                                 <option value="<?= $d->id ?>" <?= ($filters['driver_id'] == $d->id) ? 'selected' : '' ?>>
@@ -215,83 +210,94 @@
                                 </option>
                             <?php endforeach; ?>
                         </select>
+                        <input type="date" name="from_date" class="filter-input" value="<?= esc($filters['from_date'] ?? '') ?>">
+                        <input type="date" name="to_date" class="filter-input" value="<?= esc($filters['to_date'] ?? '') ?>">
+                        
+                        <button type="submit" class="btn-add" style="border-radius:8px; padding:0.6rem 1rem;">Search</button>
+                        <a href="<?= base_url('dispatch/trips') ?>" class="btn-outline-action" style="text-decoration:none;">Clear</a>
                     </div>
-
-                    <div style="display:flex; gap:0.5rem; align-items:center;">
-                        <input type="date" name="from_date" class="form-control" title="From Date" value="<?= esc($filters['from_date'] ?? '') ?>" style="width: 140px; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 4px;">
-                        <span style="color:var(--text-secondary); font-size:0.8rem;">to</span>
-                        <input type="date" name="to_date" class="form-control" title="To Date" value="<?= esc($filters['to_date'] ?? '') ?>" style="width: 140px; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 4px;">
+                    <div class="toolbar-actions">
+                        <button id="bulkPrintTripBtn" type="button" onclick="bulkPrintSelectedTrips()" class="btn-outline-action" style="display:none; color: var(--primary-blue); border-color: var(--primary-blue);">
+                            <i data-lucide="printer" width="16"></i> Bulk Print (<span id="selectedTripCount">0</span>)
+                        </button>
                     </div>
-
-                    <button type="submit" class="btn btn-primary" style="padding: 0.5rem 1rem;">Search</button>
-                    <a href="<?= base_url('dispatch/trips') ?>" class="btn btn-outline" style="padding: 0.5rem 1rem; text-decoration: none; border: 1px solid var(--border-color); color: var(--text-secondary); border-radius: 4px; display: inline-flex; align-items: center;">Clear</a>
-                    
-                    <button id="bulkPrintTripBtn" type="button" onclick="bulkPrintSelectedTrips()" class="btn btn-outline" style="display:none; align-items:center; gap:6px; padding: 0.5rem 1rem; font-weight: 600; border-color: var(--primary); color: var(--primary);">
-                        <i data-lucide="printer" width="16"></i> Bulk Print (<span id="selectedTripCount">0</span>)
-                    </button>
                 </form>
-            </div>
 
-            <!-- Global Selection Toggle -->
-            <div style="padding: 0 1rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text-secondary);">
-                <input type="checkbox" id="selectAllTrips" onclick="toggleAllTrips(this)">
-                <label for="selectAllTrips" style="cursor: pointer; margin: 0;">Select All on Current View</label>
-            </div>
+                <div style="padding: 1rem 0; font-size: 0.85rem; color: var(--text-gray); display:flex; align-items:center; gap:8px;">
+                    <input type="checkbox" id="selectAllTrips" onclick="toggleAllTrips(this)">
+                    <label for="selectAllTrips" style="cursor: pointer; margin: 0;">Select All on Current View</label>
+                </div>
 
-            <!-- Tabs -->
-            <div class="tabs-nav">
-                <button class="tab-btn <?= ($active_tab == 'queue') ? 'active' : '' ?>" onclick="switchTab('queue')">
-                    Queue 
-                    <?php if(count($trips_queue) > 0): ?>
-                        <span class="tab-badge"><?= count($trips_queue) ?></span>
-                    <?php endif; ?>
-                </button>
-                <button class="tab-btn <?= ($active_tab == 'active') ? 'active' : '' ?>" onclick="switchTab('active')">
-                    Active
-                    <?php if(count($trips_active) > 0): ?>
-                        <span class="tab-badge" style="background:var(--info);"><?= count($trips_active) ?></span>
-                    <?php endif; ?>
-                </button>
-                <button class="tab-btn <?= ($active_tab == 'history') ? 'active' : '' ?>" onclick="switchTab('history')">History</button>
-                <button class="tab-btn <?= ($active_tab == 'all') ? 'active' : '' ?>" onclick="switchTab('all')">All Trips <span class="tab-badge" style="background:var(--text-secondary);"><?= count($trips_all) ?></span></button>
-            </div>
+                <!-- Tabs -->
+                <div class="tabs-nav">
+                    <button type="button" class="tab-btn <?= ($active_tab == 'queue') ? 'active' : '' ?>" onclick="switchTab('queue')">
+                        Queue 
+                        <?php if(count($trips_queue) > 0): ?>
+                            <span class="tab-badge" style="background:var(--primary-blue);"><?= count($trips_queue) ?></span>
+                        <?php endif; ?>
+                    </button>
+                    <button type="button" class="tab-btn <?= ($active_tab == 'active') ? 'active' : '' ?>" onclick="switchTab('active')">
+                        Active
+                        <?php if(count($trips_active) > 0): ?>
+                            <span class="tab-badge" style="background:#0ea5e9;"><?= count($trips_active) ?></span>
+                        <?php endif; ?>
+                    </button>
+                    <button type="button" class="tab-btn <?= ($active_tab == 'history') ? 'active' : '' ?>" onclick="switchTab('history')">History</button>
+                    <button type="button" class="tab-btn <?= ($active_tab == 'all') ? 'active' : '' ?>" onclick="switchTab('all')">All Trips <span class="tab-badge"><?= count($trips_all) ?></span></button>
+                </div>
 
-            <!-- Content -->
-            <div id="tab-queue" class="tab-pane <?= ($active_tab == 'queue') ? 'active' : '' ?>">
-                <?php if(empty($trips_queue)): ?>
-                    <div class="empty-state" style="text-align:center; padding:3rem; color:var(--text-secondary);">
-                        <i data-lucide="check-circle" width="48" style="opacity:0.2; margin-bottom:1rem;"></i>
-                        <p>All caught up! No pending trips.</p>
-                    </div>
-                <?php else: ?>
-                    <?php foreach($trips_queue as $t): ?>
-                        <?= view('App\Modules\Dispatch\Views\trips\_card', ['trip' => $t, 'type' => 'queue']) ?>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </div>
+                <!-- Content -->
+                <div id="tab-queue" class="tab-pane <?= ($active_tab == 'queue') ? 'active' : '' ?>">
+                    <table class="custom-table">
+                        <thead><tr><th style="width:5%;">Sel</th><th style="width:15%;">Trip</th><th style="width:30%;">Route</th><th style="width:20%;">Participants</th><th style="width:15%;">Price</th><th style="width:15%;">Actions</th></tr></thead>
+                        <tbody>
+                            <?php if(empty($trips_queue)): ?>
+                                <tr><td colspan="6" style="text-align:center; padding:3rem; color:var(--text-gray);">All caught up! No pending trips.</td></tr>
+                            <?php else: ?>
+                                <?php foreach($trips_queue as $t): ?>
+                                    <?= view('App\Modules\Dispatch\Views\trips\_card', ['trip' => $t, 'type' => 'queue']) ?>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
 
-            <div id="tab-active" class="tab-pane <?= ($active_tab == 'active') ? 'active' : '' ?>">
-                 <?php if(empty($trips_active)): ?>
-                    <div class="empty-state" style="text-align:center; padding:3rem; color:var(--text-secondary);">
-                        <p>No active trips right now.</p>
-                    </div>
-                <?php else: ?>
-                    <?php foreach($trips_active as $t): ?>
-                         <?= view('App\Modules\Dispatch\Views\trips\_card', ['trip' => $t, 'type' => 'active']) ?>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </div>
+                <div id="tab-active" class="tab-pane <?= ($active_tab == 'active') ? 'active' : '' ?>">
+                    <table class="custom-table">
+                        <thead><tr><th style="width:5%;">Sel</th><th style="width:15%;">Trip</th><th style="width:30%;">Route</th><th style="width:20%;">Participants</th><th style="width:15%;">Price</th><th style="width:15%;">Actions</th></tr></thead>
+                        <tbody>
+                            <?php if(empty($trips_active)): ?>
+                                <tr><td colspan="6" style="text-align:center; padding:3rem; color:var(--text-gray);">No active trips right now.</td></tr>
+                            <?php else: ?>
+                                <?php foreach($trips_active as $t): ?>
+                                    <?= view('App\Modules\Dispatch\Views\trips\_card', ['trip' => $t, 'type' => 'active']) ?>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
 
-            <div id="tab-history" class="tab-pane <?= ($active_tab == 'history') ? 'active' : '' ?>">
-                 <?php foreach($trips_history as $t): ?>
-                     <?= view('App\Modules\Dispatch\Views\trips\_card', ['trip' => $t, 'type' => 'history']) ?>
-                 <?php endforeach; ?>
-            </div>
+                <div id="tab-history" class="tab-pane <?= ($active_tab == 'history') ? 'active' : '' ?>">
+                    <table class="custom-table">
+                        <thead><tr><th style="width:5%;">Sel</th><th style="width:15%;">Trip</th><th style="width:30%;">Route</th><th style="width:20%;">Participants</th><th style="width:15%;">Price</th><th style="width:15%;">Actions</th></tr></thead>
+                        <tbody>
+                            <?php foreach($trips_history as $t): ?>
+                                <?= view('App\Modules\Dispatch\Views\trips\_card', ['trip' => $t, 'type' => 'history']) ?>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
 
-            <div id="tab-all" class="tab-pane <?= ($active_tab == 'all') ? 'active' : '' ?>">
-                 <?php foreach($trips_all as $t): ?>
-                     <?= view('App\Modules\Dispatch\Views\trips\_card', ['trip' => $t, 'type' => 'all']) ?>
-                 <?php endforeach; ?>
+                <div id="tab-all" class="tab-pane <?= ($active_tab == 'all') ? 'active' : '' ?>">
+                    <table class="custom-table">
+                        <thead><tr><th style="width:5%;">Sel</th><th style="width:15%;">Trip</th><th style="width:30%;">Route</th><th style="width:20%;">Participants</th><th style="width:15%;">Price</th><th style="width:15%;">Actions</th></tr></thead>
+                        <tbody>
+                            <?php foreach($trips_all as $t): ?>
+                                <?= view('App\Modules\Dispatch\Views\trips\_card', ['trip' => $t, 'type' => 'all']) ?>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -299,14 +305,14 @@
 
 <!-- Quick Assign Modal -->
 <div id="assignModal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1100; align-items:center; justify-content:center;">
-    <div class="modal-content" style="background:var(--bg-surface); padding:2rem; border-radius:var(--radius-md); width:400px; box-shadow:var(--shadow-lg);">
-        <h3 class="h4" style="margin-bottom:1rem;">Assign Driver</h3>
+    <div class="modal-content" style="background:#ffffff; padding:2rem; border-radius:12px; width:400px; box-shadow:var(--shadow-card);">
+        <h3 class="h4" style="margin-bottom:1rem; color:var(--text-dark);">Assign Driver</h3>
         <form action="<?= base_url('dispatch/trips/update') ?>/TODO" method="post" id="assignForm">
              <input type="hidden" name="status" value="dispatching"> 
              
              <div class="form-group" style="margin-bottom:1.5rem;">
-                <label class="form-label">Select Driver</label>
-                <select name="driver_id" class="form-select" required>
+                <label class="form-label" style="color:var(--text-gray);">Select Driver</label>
+                <select name="driver_id" class="form-select filter-input" style="width:100%; margin-top:0.5rem;" required>
                     <option value="">-- Choose Driver --</option>
                     <?php foreach($drivers as $d): ?>
                         <option value="<?= $d->id ?>"><?= esc($d->first_name . ' ' . $d->last_name) ?> (<?= $d->vehicle_model ?>) - ★ <?= number_format($d->rating ?? 0, 1) ?></option>
@@ -315,8 +321,8 @@
              </div>
              
              <div style="display:flex; justify-content:flex-end; gap:1rem;">
-                <button type="button" class="btn btn-secondary" onclick="document.getElementById('assignModal').style.display='none'">Cancel</button>
-                <button type="submit" class="btn btn-primary">Assign & Dispatch</button>
+                <button type="button" class="btn-outline-action" onclick="document.getElementById('assignModal').style.display='none'">Cancel</button>
+                <button type="submit" class="btn-add" style="border-radius:8px;">Assign & Dispatch</button>
              </div>
         </form>
     </div>
@@ -325,19 +331,19 @@
 <!-- Rating Modal -->
 <div class="modal fade" id="ratingModal" tabindex="-1" style="z-index: 2000;">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px; overflow: hidden; background: var(--bg-surface);">
-            <div class="modal-header border-0 pb-0 pt-4 px-4">
-                <h5 class="modal-title fw-800" id="rate-modal-title" style="font-size: 1.25rem;">Rate Participant</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" onclick="closeRateModal()"></button>
+        <div class="modal-content border-0" style="border-radius: 12px; overflow: hidden; background: #ffffff; box-shadow: var(--shadow-card);">
+            <div class="modal-header border-0 pb-0 pt-4 px-4" style="display:flex; justify-content:space-between;">
+                <h5 class="modal-title" id="rate-modal-title" style="font-size: 1.25rem; font-weight:700; color:var(--text-dark); margin:0;">Rate Participant</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" onclick="closeRateModal()" style="background:none; border:none; cursor:pointer;"><i data-lucide="x" width="20"></i></button>
             </div>
-            <div class="modal-body p-4">
+            <div class="modal-body p-4" style="padding:1.5rem;">
                 <input type="hidden" id="rate-trip-id">
                 <input type="hidden" id="ratee-type">
                 <input type="hidden" id="ratee-id">
 
-                <div class="text-center mb-4">
-                    <div id="rate-modal-subtitle" style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 1.25rem;">Share feedback about <strong>TRP-<span id="lbl-rate-trip-num"></span></strong></div>
-                    <div class="star-rating justify-content-center" id="modal-star-group" style="font-size: 2.25rem; gap: 12px; display: flex;">
+                <div class="text-center" style="margin-bottom: 1.5rem; text-align:center;">
+                    <div id="rate-modal-subtitle" style="font-size: 0.9rem; color: var(--text-gray); margin-bottom: 1.25rem;">Share feedback about <strong style="color:var(--text-dark);">TRP-<span id="lbl-rate-trip-num"></span></strong></div>
+                    <div class="star-rating" id="modal-star-group" style="font-size: 2.25rem; gap: 12px; display: flex; justify-content:center;">
                         <span data-value="1" class="star-item modal-star" style="cursor:pointer; transition:0.2s;">★</span>
                         <span data-value="2" class="star-item modal-star" style="cursor:pointer; transition:0.2s;">★</span>
                         <span data-value="3" class="star-item modal-star" style="cursor:pointer; transition:0.2s;">★</span>
@@ -346,12 +352,12 @@
                     </div>
                 </div>
 
-                <div class="premium-input-group mb-4">
-                    <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 8px; display: block;">Review & Comment</label>
-                    <textarea id="rate-comment" class="form-control border-0 bg-light-subtle" placeholder="What was your experience with this participant?" style="height: 120px; padding: 15px; border-radius: 12px; resize: none; width: 100%; border: 1px solid var(--border-color);"></textarea>
+                <div class="premium-input-group" style="margin-bottom: 1.5rem;">
+                    <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-gray); text-transform: uppercase; margin-bottom: 8px; display: block;">Review & Comment</label>
+                    <textarea id="rate-comment" class="form-control" placeholder="What was your experience with this participant?" style="height: 120px; padding: 15px; border-radius: 8px; resize: none; width: 100%; border: 1px solid var(--border-light); background:#f8fafc; color:var(--text-dark); box-sizing:border-box;"></textarea>
                 </div>
 
-                <button type="button" class="btn btn-primary w-100 py-3 fw-800" id="btn-submit-rating" style="border-radius: 12px; font-size: 1rem; letter-spacing: 0.02em;">Submit Rating</button>
+                <button type="button" class="btn-add" id="btn-submit-rating" style="width: 100%; justify-content:center; padding:0.8rem; font-size:1rem;">Submit Rating</button>
             </div>
         </div>
     </div>
@@ -359,31 +365,31 @@
 
 <!-- Dispute Modal -->
 <div id="disputeModal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1100; align-items:center; justify-content:center;">
-    <div class="modal-content" style="background:var(--bg-surface); padding:2rem; border-radius:var(--radius-md); width:450px; box-shadow:var(--shadow-lg);">
-        <h3 class="h4" style="margin-bottom:1rem;">Report Dispute</h3>
+    <div class="modal-content" style="background:#ffffff; padding:2rem; border-radius:12px; width:450px; box-shadow:var(--shadow-card);">
+        <h3 class="h4" style="margin-bottom:1rem; color:var(--text-dark);">Report Dispute</h3>
         <form action="<?= base_url('api/disputes/create') ?>" method="post" id="disputeForm" enctype="multipart/form-data">
              <input type="hidden" name="trip_id" id="disputeTripId">
              <input type="hidden" name="customer_id" id="disputeCustomerId">
              <input type="hidden" name="driver_id" id="disputeDriverId">
              
              <div class="form-group" style="margin-bottom:1rem;">
-                <label class="form-label">Subject</label>
-                <input type="text" name="subject" class="form-control" placeholder="e.g. Fare disagreement" required style="width:100%; padding:0.5rem; border:1px solid var(--border-color); border-radius:4px;">
+                <label class="form-label" style="color:var(--text-gray); margin-bottom:0.5rem; display:block;">Subject</label>
+                <input type="text" name="subject" class="filter-input" placeholder="e.g. Fare disagreement" required style="width:100%; box-sizing:border-box;">
              </div>
 
              <div class="form-group" style="margin-bottom:1rem;">
-                <label class="form-label">Description</label>
-                <textarea name="description" class="form-control" rows="3" placeholder="Tell us what happened..." required style="width:100%; padding:0.5rem; border:1px solid var(--border-color); border-radius:4px;"></textarea>
+                <label class="form-label" style="color:var(--text-gray); margin-bottom:0.5rem; display:block;">Description</label>
+                <textarea name="description" class="filter-input" rows="3" placeholder="Tell us what happened..." required style="width:100%; height:auto; box-sizing:border-box;"></textarea>
              </div>
 
              <div class="form-group" style="margin-bottom:1.5rem;">
-                <label class="form-label">Attachments (Optional)</label>
-                <input type="file" name="attachments[]" multiple class="form-control" style="width:100%;">
+                <label class="form-label" style="color:var(--text-gray); margin-bottom:0.5rem; display:block;">Attachments (Optional)</label>
+                <input type="file" name="attachments[]" multiple class="filter-input" style="width:100%; box-sizing:border-box;">
              </div>
              
              <div style="display:flex; justify-content:flex-end; gap:1rem;">
-                <button type="button" class="btn btn-secondary" onclick="closeDisputeModal()">Cancel</button>
-                <button type="submit" class="btn btn-primary">File Dispute</button>
+                <button type="button" class="btn-outline-action" onclick="closeDisputeModal()">Cancel</button>
+                <button type="submit" class="btn-add" style="background:#ef4444;">File Dispute</button>
              </div>
         </form>
     </div>
@@ -391,10 +397,10 @@
 
 <!-- Trip Details Modal -->
 <div id="tripDetailsModal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1100; align-items:center; justify-content:center;">
-    <div class="modal-content" style="background:var(--bg-surface); padding:0; border-radius:var(--radius-md); width:600px; max-height:90vh; overflow-y:auto; box-shadow:var(--shadow-lg);">
-        <div class="sidebar-header" style="background:var(--bg-surface-hover); border-bottom:1px solid var(--border-color); position:sticky; top:0; z-index:10;">
+    <div class="modal-content" style="background:#ffffff; padding:0; border-radius:12px; width:600px; max-height:90vh; overflow-y:auto; box-shadow:var(--shadow-card);">
+        <div class="sidebar-header" style="background:#f8fafc; border-bottom:1px solid var(--border-light); position:sticky; top:0; z-index:10; padding:1.5rem; display:flex; justify-content:space-between; align-items:center;">
             <div style="display:flex; align-items:center; gap:10px;">
-                <span id="mdTripNumber" class="h4" style="margin:0;">#TRP-XXXX</span>
+                <span id="mdTripNumber" class="h4" style="margin:0; font-weight:700; color:var(--text-dark);">#TRP-XXXX</span>
                 <span id="mdTripStatus" class="status-badge">Status</span>
             </div>
             <button onclick="closeTripDetailsModal()" style="background:none; border:none; cursor:pointer;"><i data-lucide="x" width="20"></i></button>
@@ -403,67 +409,67 @@
         <div style="padding:1.5rem;">
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; margin-bottom:1.5rem;">
                 <div>
-                    <div style="font-size:0.75rem; color:var(--text-secondary); text-transform:uppercase; margin-bottom:0.5rem;">Customer</div>
+                    <div style="font-size:0.75rem; color:var(--text-gray); text-transform:uppercase; margin-bottom:0.5rem; font-weight:600;">Customer</div>
                     <div style="display:flex; align-items:center; gap:0.75rem;">
-                        <div class="driver-avatar-sm" style="width:40px; height:40px;">C</div>
+                        <div class="driver-avatar-sm" style="width:40px; height:40px; border-radius:50%; background:#e2e8f0; display:flex; align-items:center; justify-content:center; font-weight:600; color:var(--text-gray);">C</div>
                         <div>
-                            <div id="mdCustomerName" style="font-weight:700;">Name</div>
-                            <div id="mdCustomerPhone" style="font-size:0.85rem; color:var(--text-secondary);">Phone</div>
+                            <div id="mdCustomerName" style="font-weight:700; color:var(--text-dark);">Name</div>
+                            <div id="mdCustomerPhone" style="font-size:0.85rem; color:var(--text-gray);">Phone</div>
                         </div>
                     </div>
                 </div>
                 <div>
-                    <div style="font-size:0.75rem; color:var(--text-secondary); text-transform:uppercase; margin-bottom:0.5rem;">Driver</div>
+                    <div style="font-size:0.75rem; color:var(--text-gray); text-transform:uppercase; margin-bottom:0.5rem; font-weight:600;">Driver</div>
                     <div style="display:flex; align-items:center; gap:0.75rem;">
-                        <div class="driver-avatar-sm" style="width:40px; height:40px; background:var(--primary-subtle); color:var(--primary);">D</div>
+                        <div class="driver-avatar-sm" style="width:40px; height:40px; border-radius:50%; background:#eff6ff; display:flex; align-items:center; justify-content:center; font-weight:600; color:var(--primary-blue);">D</div>
                         <div>
-                            <div id="mdDriverName" style="font-weight:700;">Unassigned</div>
-                            <div id="mdDriverVehicle" style="font-size:0.85rem; color:var(--text-secondary);">Vehicle</div>
+                            <div id="mdDriverName" style="font-weight:700; color:var(--text-dark);">Unassigned</div>
+                            <div id="mdDriverVehicle" style="font-size:0.85rem; color:var(--text-gray);">Vehicle</div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div style="background:var(--bg-surface-hover); padding:1rem; border-radius:var(--radius-sm); margin-bottom:1.5rem;">
+            <div style="background:#f8fafc; padding:1rem; border-radius:8px; margin-bottom:1.5rem; border:1px solid var(--border-light);">
                 <div style="margin-bottom:1rem;">
                     <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
-                        <i data-lucide="map-pin" width="14" style="color:var(--success);"></i>
-                        <span style="font-size:0.75rem; color:var(--text-secondary); font-weight:700;">PICKUP</span>
+                        <i data-lucide="map-pin" width="14" style="color:#22c55e;"></i>
+                        <span style="font-size:0.75rem; color:var(--text-gray); font-weight:700;">PICKUP</span>
                     </div>
-                    <div id="mdPickupAddress" style="padding-left:22px; font-size:0.9rem;">Address</div>
+                    <div id="mdPickupAddress" style="padding-left:22px; font-size:0.9rem; color:var(--text-dark); font-weight:500;">Address</div>
                 </div>
                 <div>
                     <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
-                        <i data-lucide="navigation" width="14" style="color:var(--danger);"></i>
-                        <span style="font-size:0.75rem; color:var(--text-secondary); font-weight:700;">DROPOFF</span>
+                        <i data-lucide="navigation" width="14" style="color:#ef4444;"></i>
+                        <span style="font-size:0.75rem; color:var(--text-gray); font-weight:700;">DROPOFF</span>
                     </div>
-                    <div id="mdDropoffAddress" style="padding-left:22px; font-size:0.9rem;">Address</div>
+                    <div id="mdDropoffAddress" style="padding-left:22px; font-size:0.9rem; color:var(--text-dark); font-weight:500;">Address</div>
                 </div>
             </div>
 
-            <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:1rem; border-top:1px solid var(--border-color); pt-1.5rem; padding-top:1.5rem;">
+            <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:1rem; border-top:1px solid var(--border-light); padding-top:1.5rem;">
                 <div>
-                    <div style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:4px;">Date/Time</div>
-                    <div id="mdDateTime" style="font-weight:600;">Date</div>
-                    <div id="mdTimeOnly" style="font-size:0.85rem; color:var(--text-secondary);">Time</div>
+                    <div style="font-size:0.75rem; color:var(--text-gray); margin-bottom:4px; font-weight:600;">Date/Time</div>
+                    <div id="mdDateTime" style="font-weight:600; color:var(--text-dark);">Date</div>
+                    <div id="mdTimeOnly" style="font-size:0.85rem; color:var(--text-gray);">Time</div>
                 </div>
                 <div>
-                    <div style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:4px;">Fare & Method</div>
-                    <div id="mdPrice" style="font-weight:700; color:var(--primary);">Amount</div>
-                    <div id="mdPayment" style="font-size:0.85rem; color:var(--text-secondary);">Cash</div>
+                    <div style="font-size:0.75rem; color:var(--text-gray); margin-bottom:4px; font-weight:600;">Fare & Method</div>
+                    <div id="mdPrice" style="font-weight:700; color:var(--primary-blue); font-size:1.1rem;">Amount</div>
+                    <div id="mdPayment" style="font-size:0.85rem; color:var(--text-gray); text-transform:uppercase; font-weight:500;">Cash</div>
                 </div>
                 <div>
-                    <div style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:4px;">Trip Stats</div>
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <span id="mdDistance" style="font-weight:600;">Distance</span>
-                        <span id="mdDurationOnly" style="font-size:0.85rem; color:var(--text-secondary);">Duration</span>
+                    <div style="font-size:0.75rem; color:var(--text-gray); margin-bottom:4px; font-weight:600;">Trip Stats</div>
+                    <div style="display:flex; flex-direction:column; gap:2px;">
+                        <span id="mdDistance" style="font-weight:600; color:var(--text-dark);">Distance</span>
+                        <span id="mdDurationOnly" style="font-size:0.85rem; color:var(--text-gray);">Duration</span>
                     </div>
                 </div>
             </div>
 
-            <div style="margin-top:1.5rem; border-top:1px solid var(--border-color); padding-top:1.5rem;">
-                <div style="font-size:0.75rem; color:var(--text-secondary); text-transform:uppercase; margin-bottom:0.5rem;">Dispatcher Notes</div>
-                <p id="mdNotes" style="font-size:0.9rem; font-style:italic;">No notes.</p>
+            <div style="margin-top:1.5rem; border-top:1px solid var(--border-light); padding-top:1.5rem;">
+                <div style="font-size:0.75rem; color:var(--text-gray); text-transform:uppercase; margin-bottom:0.5rem; font-weight:600;">Dispatcher Notes</div>
+                <p id="mdNotes" style="font-size:0.9rem; font-style:italic; color:var(--text-dark); margin:0;">No notes.</p>
             </div>
         </div>
     </div>

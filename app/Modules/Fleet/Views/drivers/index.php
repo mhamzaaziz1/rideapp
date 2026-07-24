@@ -3,199 +3,240 @@
 <?= $this->section('content') ?>
 
 <style>
-    /* Stats Cards */
-    .stats-container {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 1.5rem;
+    :root {
+        --bg-body-new: #f8f9fc;
+        --border-light: #e5e7eb;
+        --text-dark: #111827;
+        --text-gray: #6b7280;
+        --primary-blue: #3b82f6;
+        --primary-blue-hover: #2563eb;
+        --success-bg: #dcfce7;
+        --success-text: #166534;
+        --success-border: #bbf7d0;
+        --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    }
+    
+    body { background-color: var(--bg-body-new); font-family: 'Inter', sans-serif; }
+    .main-content { background-color: var(--bg-body-new); }
+
+    /* Header */
+    .page-header {
+        display: flex; justify-content: space-between; align-items: flex-start;
         margin-bottom: 2rem;
     }
+    .page-title { font-size: 1.75rem; font-weight: 700; color: var(--text-dark); margin-bottom: 0.25rem; }
+    .page-desc { color: var(--text-gray); font-size: 0.95rem; }
+    
+    .btn-add {
+        background-color: var(--primary-blue); color: white;
+        border-radius: 8px; padding: 0.6rem 1.25rem; font-weight: 600;
+        display: inline-flex; align-items: center; gap: 0.5rem; border: none;
+        box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+        transition: background 0.2s;
+        cursor: pointer;
+        text-decoration: none;
+    }
+    .btn-add:hover { background-color: var(--primary-blue-hover); color: white; text-decoration: none; }
+
+    /* Stats Cards */
+    .stats-container {
+        display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.25rem; margin-bottom: 2rem;
+    }
     .stat-card {
-        background: var(--bg-surface);
-        border: 1px solid var(--border-color);
-        border-radius: var(--radius-md);
-        padding: 1.5rem;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
+        background: #ffffff; border-radius: 12px; padding: 1.5rem;
+        box-shadow: var(--shadow-card); border: 1px solid var(--border-light);
+        display: flex; flex-direction: column; position: relative;
     }
-    .stat-label { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem; }
-    .stat-value { font-size: 1.75rem; font-weight: 700; color: var(--text-primary); }
-    .stat-icon { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--bg-surface-hover); color: var(--text-accent); }
-    
-    /* Search Bar */
-    .filter-bar {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 1rem;
+    .stat-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+    .stat-title { font-size: 0.95rem; font-weight: 600; color: var(--text-dark); }
+    .stat-icon {
+        width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center;
     }
-    .search-input-wrapper {
-        position: relative;
-        width: 100%;
-        max-width: 400px;
+    .icon-blue { background: #eff6ff; color: #3b82f6; }
+    .icon-orange { background: #fff7ed; color: #f97316; }
+    .icon-green { background: #f0fdf4; color: #22c55e; }
+    .icon-purple { background: #f3e8ff; color: #a855f7; }
+    .stat-value { font-size: 2rem; font-weight: 700; color: var(--text-dark); line-height: 1.2; }
+    .stat-sub { font-size: 0.8rem; color: var(--text-gray); display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; }
+    .mini-chart { flex-grow: 1; height: 2px; background: #cbd5e1; border-radius: 2px; position: relative; }
+    .mini-chart::after { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 60%; background: var(--primary-blue); border-radius: 2px; }
+
+    /* Table Container */
+    .table-container {
+        background: #ffffff; border-radius: 12px; box-shadow: var(--shadow-card); border: 1px solid var(--border-light); padding: 1.5rem;
     }
-    .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); width: 16px; }
+
+    /* Toolbar */
+    .toolbar { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; }
+    .search-wrapper { position: relative; width: 320px; }
     .search-input {
-        width: 100%;
-        padding: 0.75rem 1rem 0.75rem 2.5rem;
-        background: var(--bg-surface);
-        border: 1px solid var(--border-color);
-        border-radius: var(--radius-sm);
-        color: var(--text-primary);
+        width: 100%; padding: 0.6rem 1rem 0.6rem 2.5rem; border: 1px solid var(--border-light);
+        border-radius: 8px; font-size: 0.95rem; color: var(--text-dark);
     }
-    .status-filter {
-         background: var(--bg-surface);
-         border: 1px solid var(--border-color);
-         padding: 0.75rem 1rem;
-         border-radius: var(--radius-sm);
-         color: var(--text-primary);
-         cursor: pointer;
-    }
-
-    /* Drivers List */
-    .drivers-list {
-        background: var(--bg-surface);
-        border: 1px solid var(--border-color);
-        border-radius: var(--radius-md);
-        display: flex;
-        flex-direction: column;
-    }
-    .driver-item {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 1.25rem 1.5rem;
-        border-bottom: 1px solid var(--border-color);
-    }
-    .driver-item:last-child { border-bottom: none; }
+    .search-icon { position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: var(--text-gray); }
+    .active-filters { display: inline-flex; align-items: center; background: #f1f5f9; padding: 0.35rem 0.75rem; border-radius: 16px; font-size: 0.85rem; color: var(--text-gray); margin-top: 0.75rem; gap: 0.5rem; font-weight: 500; }
     
-    .driver-info { display: flex; align-items: center; gap: 1rem; }
-    .driver-avatar {
-        width: 48px; height: 48px;
-        background: var(--bg-surface-hover);
-        border-radius: 50%;
-        display: flex; align-items: center; justify-content: center;
-        font-weight: 600;
-        color: var(--primary);
-        font-size: 1rem;
+    .toolbar-actions { display: flex; gap: 0.75rem; }
+    .btn-outline-action {
+        border: 1px solid var(--border-light); background: #ffffff; color: var(--text-dark);
+        border-radius: 8px; padding: 0.6rem 1rem; font-size: 0.9rem; font-weight: 600;
+        display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; transition: background 0.2s;
     }
-    .driver-meta { font-size: 0.85rem; color: var(--text-secondary); display: flex; align-items: center; gap: 1rem; margin-top: 4px; }
-    .status-badge { padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; text-transform: capitalize; }
-    .status-active { background: rgba(16, 185, 129, 0.1); color: var(--success); }
-    .status-inactive { background: rgba(239, 68, 68, 0.1); color: var(--text-secondary); }
+    .btn-outline-action:hover { background: #f8fafc; }
 
-    .vehicle-info { text-align: right; }
-    .vehicle-name { font-weight: 600; font-size: 0.9rem; }
-    .vehicle-meta { font-size: 0.8rem; color: var(--text-secondary); }
-    .vehicle-tag { border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; margin-right: 8px; }
-
+    /* Table */
+    .custom-table { width: 100%; border-collapse: collapse; }
+    .custom-table th { 
+        text-align: left; padding: 1rem 0.5rem; font-size: 0.85rem; font-weight: 700; color: var(--text-dark); 
+        border-bottom: 1px solid var(--border-light); border-top: 1px solid var(--border-light);
+    }
+    .custom-table td { padding: 1.25rem 0.5rem; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+    .custom-table tr:last-child td { border-bottom: none; }
+    
+    .driver-cell { display: flex; align-items: center; gap: 1rem; }
+    .avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: #e2e8f0; display: flex; align-items: center; justify-content: center; font-weight: 600; color: var(--text-gray); }
+    .driver-name { font-weight: 600; color: var(--text-dark); font-size: 0.95rem; margin-bottom: 0.15rem; }
+    .text-muted { color: var(--text-gray); font-size: 0.85rem; }
+    
+    .contact-cell .text-muted { display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.25rem; }
+    
+    .status-badge {
+        display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.75rem;
+        border-radius: 16px; font-size: 0.8rem; font-weight: 600; cursor: pointer; text-transform: capitalize;
+    }
+    .status-active { background: var(--success-bg); color: var(--success-text); border: 1px solid var(--success-border); }
+    .status-inactive { background: #f1f5f9; color: var(--text-gray); border: 1px solid var(--border-light); }
+    
+    .stats-cell { font-size: 0.9rem; font-weight: 500; color: var(--text-dark); display: flex; align-items: center; gap: 1rem; }
+    .stats-cell .stat-item { display: flex; align-items: center; gap: 0.5rem; }
+    
+    .actions-cell { display: flex; gap: 0.75rem; }
+    .action-icon { color: var(--text-gray); cursor: pointer; transition: color 0.2s; }
+    .action-icon:hover { color: var(--text-dark); }
+    .action-icon.delete:hover { color: #ef4444; }
 </style>
 
-<div style="padding: 2rem;">
+<div style="padding: 2.5rem;">
     
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2rem;">
+    <div class="page-header">
         <div>
-            <h1 style="font-size:1.5rem; font-weight:700;">Driver Management</h1>
-            <p style="color:var(--text-secondary); font-size:0.9rem;">Manage your driver fleet and vehicles</p>
+            <h1 class="page-title">Driver Management</h1>
+            <p class="page-desc">Manage your driver fleet and vehicles.</p>
         </div>
-        <a href="#" id="btnAddDriver" class="btn btn-primary"><i data-lucide="plus" width="16" style="margin-right:8px"></i> Add Driver</a>
+        <a href="#" id="btnAddDriver" class="btn-add">
+            <i data-lucide="plus" width="18"></i> Add Driver
+        </a>
     </div>
 
     <!-- Stats -->
     <div class="stats-container">
         <div class="stat-card">
-            <div>
-                <div class="stat-label">Total Drivers</div>
-                <div class="stat-value"><?= $total_drivers ?></div>
+            <div class="stat-header">
+                <div class="stat-title">Total Drivers</div>
+                <div class="stat-icon icon-blue"><i data-lucide="car" width="18"></i></div>
             </div>
-            <div class="stat-icon"><i data-lucide="car"></i></div>
+            <div class="stat-value"><?= $total_drivers ?></div>
         </div>
         <div class="stat-card">
-            <div>
-                <div class="stat-label">Active</div>
-                <div class="stat-value" style="color:var(--success)"><?= $active_drivers ?></div>
+            <div class="stat-header">
+                <div class="stat-title">Active</div>
+                <div class="stat-icon icon-green"><i data-lucide="check-circle" width="18"></i></div>
             </div>
-            <div class="stat-icon"><i data-lucide="check-circle" style="color:var(--success)"></i></div>
+            <div class="stat-value"><?= $active_drivers ?></div>
         </div>
         <div class="stat-card">
-            <div>
-                <div class="stat-label">Inactive</div>
-                <div class="stat-value" style="color:var(--text-secondary)"><?= $inactive_drivers ?></div>
+            <div class="stat-header">
+                <div class="stat-title">Inactive</div>
+                <div class="stat-icon icon-orange"><i data-lucide="x-circle" width="18"></i></div>
             </div>
-            <div class="stat-icon"><i data-lucide="x-circle"></i></div>
+            <div class="stat-value"><?= $inactive_drivers ?></div>
         </div>
         <div class="stat-card">
-            <div>
-                <div class="stat-label">Total Trips</div>
-                <div class="stat-value"><?= number_format($total_trips) ?></div>
+            <div class="stat-header">
+                <div class="stat-title">Total Trips</div>
+                <div class="stat-icon icon-purple"><i data-lucide="map-pin" width="18"></i></div>
             </div>
-            <div class="stat-icon"><i data-lucide="map-pin"></i></div>
+            <div class="stat-value"><?= number_format($total_trips) ?></div>
+            <div class="stat-sub">Trips over time <div class="mini-chart"></div></div>
         </div>
     </div>
 
-    <!-- Filters -->
-    <div class="filter-bar">
-        <div class="search-input-wrapper">
-            <i data-lucide="search" class="search-icon"></i>
-            <input type="text" class="search-input" placeholder="Search by name, phone, or plate...">
-        </div>
-        <select class="status-filter">
-            <option>All Status</option>
-            <option>Active</option>
-            <option>Inactive</option>
-        </select>
-    </div>
-
-    <!-- List -->
-    <div class="drivers-list">
-        <?php if(isset($error)): ?>
-            <div style="padding:2rem; color:var(--danger)">DB Error: <?= $error ?></div>
-        <?php elseif(empty($drivers)): ?>
-             <div style="padding:3rem; text-align:center; color:var(--text-secondary);">
-                <i data-lucide="users" width="48" style="opacity:0.3; margin-bottom:1rem;"></i>
-                <p>No drivers found.</p>
-             </div>
-        <?php else: ?>
-            <?php foreach($drivers as $driver): ?>
-            <div class="driver-item" onclick='viewDriver(<?= json_encode($driver) ?>)' style="cursor:pointer; transition:background 0.1s;" onmouseover="this.style.background='var(--bg-surface-hover)'" onmouseout="this.style.background='var(--bg-surface)'">
-                <div class="driver-info">
-                    <div class="driver-avatar" style="<?= $driver->avatar ? 'background:none; border:1px solid var(--border-color); overflow:hidden;' : '' ?>">
-                        <?php if($driver->avatar): ?>
-                            <img src="<?= base_url($driver->avatar) ?>" alt="Avatar" style="width:100%; height:100%; object-fit:cover;">
-                        <?php else: ?>
-                            <?= substr($driver->first_name, 0, 1) . substr($driver->last_name, 0, 1) ?>
-                        <?php endif; ?>
-                    </div>
-                    <div>
-                        <div style="font-weight:600; display:flex; align-items:center; gap:8px;">
-                            <?= esc($driver->first_name . ' ' . $driver->last_name) ?>
-                            <span class="status-badge status-<?= $driver->status ?>"><?= $driver->status ?></span>
-                        </div>
-                        <div class="driver-meta">
-                            <span><i data-lucide="phone" width="12"></i> <?= esc($driver->phone) ?></span>
-                            <span><i data-lucide="mail" width="12"></i> <?= esc($driver->email) ?></span>
-                        </div>
-                    </div>
+    <!-- Table Section -->
+    <div class="table-container">
+        <div class="toolbar">
+            <div>
+                <div class="search-wrapper">
+                    <i data-lucide="search" width="16" class="search-icon"></i>
+                    <input type="text" class="search-input" placeholder="Search by name, phone, or plate...">
                 </div>
-                <div style="display:flex; align-items:center; gap:1.5rem;">
-                    <div class="vehicle-info">
-                        <div class="vehicle-name"><?= esc($driver->vehicle_year . ' ' . $driver->vehicle_make . ' ' . $driver->vehicle_model) ?></div>
-                        <div class="vehicle-meta">
-                            <span class="vehicle-tag"><?= esc($driver->vehicle_type) ?></span>
-                            <?= esc($driver->vehicle_color) ?> | <?= esc($driver->license_plate) ?> <br>
-                            <?= $driver->total_trips ?> trips
-                        </div>
-                    </div>
-                    <div style="display:flex; gap:0.5rem;">
-                        <a href="<?= base_url('drivers/profile/'.$driver->id) ?>" title="Profile" style="color:var(--text-secondary);"><i data-lucide="user" width="16"></i></a>
-                        <a href="<?= base_url('drivers/edit/'.$driver->id) ?>" title="Edit" style="color:var(--text-secondary);"><i data-lucide="edit-2" width="16"></i></a>
-                        <a href="<?= base_url('drivers/delete/'.$driver->id) ?>" onclick="return confirm('Are you sure?')" title="Delete" style="color:var(--danger);"><i data-lucide="trash-2" width="16"></i></a>
-                    </div>
+                <div class="active-filters">
+                    Active Filters <i data-lucide="x" width="14" style="cursor:pointer"></i>
                 </div>
             </div>
-            <?php endforeach; ?>
-        <?php endif; ?>
+            <div class="toolbar-actions">
+                <button class="btn-outline-action"><i data-lucide="list-filter" width="16"></i> Filter</button>
+                <button class="btn-outline-action"><i data-lucide="upload" width="16"></i> Export</button>
+            </div>
+        </div>
+
+        <table class="custom-table">
+            <thead>
+                <tr>
+                    <th style="width: 25%">Driver</th>
+                    <th style="width: 25%">Vehicle</th>
+                    <th style="width: 15%">Status</th>
+                    <th style="width: 20%">Stats</th>
+                    <th style="width: 15%">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if(isset($error)): ?>
+                    <tr><td colspan="5" style="color:red; text-align:center;">DB Error: <?= $error ?></td></tr>
+                <?php elseif(empty($drivers)): ?>
+                    <tr><td colspan="5" style="text-align:center; color:var(--text-gray); padding: 2rem;">No drivers found.</td></tr>
+                <?php else: ?>
+                    <?php foreach($drivers as $driver): ?>
+                    <tr onclick='viewDriver(<?= json_encode($driver) ?>)' style="cursor:pointer">
+                        <td>
+                            <div class="driver-cell">
+                                <?php if($driver->avatar): ?>
+                                    <img src="<?= base_url($driver->avatar) ?>" class="avatar">
+                                <?php else: ?>
+                                    <div class="avatar"><?= strtoupper(substr($driver->first_name, 0, 1) . substr($driver->last_name, 0, 1)) ?></div>
+                                <?php endif; ?>
+                                <div>
+                                    <div class="driver-name"><?= esc($driver->first_name . ' ' . $driver->last_name) ?></div>
+                                    <div class="text-muted"><i data-lucide="phone" width="12"></i> <?= esc($driver->phone) ?></div>
+                                    <div class="text-muted" style="margin-top:2px;"><i data-lucide="mail" width="12"></i> <?= esc($driver->email) ?></div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="contact-cell">
+                            <div class="text-muted" style="color:var(--text-dark); font-weight:600;"><i data-lucide="car" width="14"></i> <?= esc($driver->vehicle_year . ' ' . $driver->vehicle_make . ' ' . $driver->vehicle_model) ?></div>
+                            <div class="text-muted" style="margin-top:4px;">Plate: <?= esc($driver->license_plate) ?> • <?= esc($driver->vehicle_type) ?></div>
+                        </td>
+                        <td onclick="event.stopPropagation()">
+                            <div class="status-badge status-<?= $driver->status ?>">
+                                <?= $driver->status ?>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="stats-cell">
+                                <div class="stat-item"><i data-lucide="route" width="14" style="color:var(--text-gray)"></i> <?= $driver->total_trips ?> Trips</div>
+                            </div>
+                        </td>
+                        <td onclick="event.stopPropagation()">
+                            <div class="actions-cell">
+                                <a href="<?= base_url('drivers/profile/'.$driver->id) ?>" class="action-icon" title="Profile"><i data-lucide="user-circle" width="18"></i></a>
+                                <a href="<?= base_url('drivers/edit/'.$driver->id) ?>" class="action-icon" title="Edit"><i data-lucide="edit-3" width="18"></i></a>
+                                <a href="<?= base_url('drivers/delete/'.$driver->id) ?>" onclick="return confirm('Are you sure?')" class="action-icon delete" title="Delete"><i data-lucide="trash-2" width="18"></i></a>
+                            </div>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </tbody>
+        </table>
     </div>
 
 

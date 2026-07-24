@@ -11,6 +11,7 @@ $routes->group('customers', ['namespace' => 'App\Modules\Customer\Controllers'],
     $routes->get('create', 'CustomerController::new');
     $routes->get('new', 'CustomerController::new');
     $routes->post('create', 'CustomerController::create');
+    $routes->post('create_ajax', 'CustomerController::createAjax');
     $routes->get('edit/(:num)', 'CustomerController::edit/$1');
     $routes->post('update/(:num)', 'CustomerController::update/$1');
     $routes->get('delete/(:num)', 'CustomerController::delete/$1');
@@ -20,6 +21,7 @@ $routes->group('customers', ['namespace' => 'App\Modules\Customer\Controllers'],
     $routes->get('print_statement/(:num)', 'CustomerController::printStatement/$1');
     $routes->get('export_statement/(:num)', 'CustomerController::exportStatement/$1');
     $routes->get('addresses/(:num)', 'CustomerController::getAddresses/$1'); // JSON API for dispatch modal
+    $routes->get('search', 'CustomerController::search'); // JSON API for customer autocomplete
     
     // Address Management
     $routes->post('address/create', 'CustomerAddressController::create');

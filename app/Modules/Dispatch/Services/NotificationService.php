@@ -90,7 +90,7 @@ class NotificationService
         $result = $this->smsService->send($phone, $message);
         
         // Store outbound message in DB
-        $this->logOutboundSms($phone, $message, $userId, $result);
+        $this->logOutboundSms($phone, $message, $userId, $result, $resolvedType);
 
         return $result['success'];
     }
@@ -105,7 +105,7 @@ class NotificationService
         }
 
         $result = $this->smsService->send($phone, $message);
-        $this->logOutboundSms($phone, $message, $relatedUserId, $result);
+        $this->logOutboundSms($phone, $message, $relatedUserId, $result, 'unknown');
 
         return $result;
     }
@@ -113,10 +113,25 @@ class NotificationService
     /**
      * Log an outbound SMS to the sms_messages table
      */
-    protected function logOutboundSms(string $phone, string $message, ?int $userId, array $result): void
+    protected function logOutboundSms(string $phone, string $message, ?int $userId, array $result, string $userType = 'unknown'): void
     {
         try {
             $db = \Config\Database::connect();
+            
+            if ($userType === 'unknown') {
+                $driver = $db->table('drivers')->select('id')->where('phone', $phone)->get()->getRow();
+                if ($driver) {
+                    $userId = $driver->id;
+                    $userType = 'driver';
+                } else {
+                    $customer = $db->table('customers')->select('id')->where('phone', $phone)->get()->getRow();
+                    if ($customer) {
+                        $userId = $customer->id;
+                        $userType = 'customer';
+                    }
+                }
+            }
+
             if ($db->tableExists('sms_messages')) {
                 $db->table('sms_messages')->insert([
                     'provider'        => $this->smsService->getProvider(),
@@ -131,6 +146,19 @@ class NotificationService
                     'created_at'      => date('Y-m-d H:i:s'),
                 ]);
             }
+
+            $logModel = new \App\Modules\Dispatch\Models\CommunicationLogModel();
+            $logModel->insert([
+                'type' => 'sms',
+                'direction' => 'outbound',
+                'from_number' => $this->smsService->getFromNumber(),
+                'to_number' => $phone,
+                'user_type' => $userType,
+                'user_id' => $userId,
+                'content' => $message,
+                'action_taken' => $result['success'] ? 'Sent automated SMS' : 'Failed to send SMS'
+            ]);
+
         } catch (\Exception $e) {
             log_message('error', "[NotificationService] Failed to log SMS: " . $e->getMessage());
         }

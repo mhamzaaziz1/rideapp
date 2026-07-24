@@ -4,6 +4,7 @@ $routes->group('drivers', ['namespace' => 'App\Modules\Fleet\Controllers'], func
     $routes->get('/', 'DriversController::index');
     $routes->get('new', 'DriversController::new');
     $routes->post('create', 'DriversController::create');
+    $routes->post('create_ajax', 'DriversController::createAjax');
     $routes->get('edit/(:num)', 'DriversController::edit/$1');
     $routes->post('update/(:num)', 'DriversController::update/$1');
     $routes->post('update_doc_status', 'DriversController::updateDocStatus');

@@ -1,210 +1,102 @@
-<div class="trip-wrapper" id="trip-wrapper-<?= $trip->id ?>">
-    <div class="trip-card" onclick="openTripDetailsModal(<?= htmlspecialchars(json_encode($trip)) ?>)">
-        <!-- 0. Selection -->
-        <div style="text-align:center;" onclick="event.stopPropagation()">
-            <input type="checkbox" class="trip-checkbox" value="<?= $trip->id ?>" onclick="updateTripBulkBtn()">
+<tr id="trip-wrapper-<?= $trip->id ?>" onclick="openTripDetailsModal(<?= htmlspecialchars(json_encode($trip)) ?>)">
+    <td onclick="event.stopPropagation()">
+        <input type="checkbox" class="trip-checkbox" value="<?= $trip->id ?>" onclick="updateTripBulkBtn()">
+    </td>
+    <td>
+        <span class="status-badge status-<?= $trip->status ?>" style="margin-bottom:6px;"><?= ucfirst($trip->status) ?></span>
+        <div style="font-weight:700; color:var(--text-dark); margin-bottom:2px;">#<?= $trip->trip_number ?></div>
+        <div class="text-muted"><?= date('M d', strtotime($trip->created_at)) ?> | <?= date('H:i', strtotime($trip->created_at)) ?></div>
+    </td>
+    <td>
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+            <div style="width:8px;height:8px;border-radius:50%;background:#22c55e;"></div>
+            <div style="font-weight:500; font-size:0.9rem; color:var(--text-dark);"><?= esc($trip->pickup_address) ?></div>
         </div>
-
-        <!-- 1. Status Column -->
-        <div style="text-align:center;">
-            <span class="status-badge status-<?= $trip->status ?>" style="display:block; margin-bottom:4px; font-size:0.7rem;">
-                <?= ucfirst($trip->status) ?>
-            </span>
-            <div style="font-family:monospace; font-weight:700; color:var(--text-primary); font-size:0.85rem;">
-                #<?= $trip->trip_number ?>
-            </div>
-            <div style="font-size:0.7rem; color:var(--text-secondary); margin-top:4px; font-weight:500; background:var(--bg-body); padding:2px 6px; border-radius:4px; display:inline-block;">
-                <?= date('M d', strtotime($trip->created_at)) ?> <span style="opacity:0.6;">|</span> <?= date('H:i', strtotime($trip->created_at)) ?>
-            </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+            <div style="width:8px;height:8px;border-radius:50%;background:#ef4444;"></div>
+            <div class="text-muted"><?= esc($trip->dropoff_address) ?></div>
         </div>
-
-        <!-- 2. Route Column -->
-        <div class="route-visual">
-            <div class="route-point">
-                <div class="route-icon" style="background:var(--success);"></div>
-                <div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:500;">
-                    <?= esc($trip->pickup_address) ?>
-                </div>
-            </div>
-            <div class="route-point">
-                <div class="route-icon" style="background:var(--danger);"></div>
-                <div style="color:var(--text-secondary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                    <?= esc($trip->dropoff_address) ?>
-                </div>
-            </div>
-            <!-- Detail Chips -->
-            <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;">
-                <!-- Distance -->
-                <span class="detail-badge" title="Distance">
-                    <i data-lucide="navigation" width="12"></i> <?= number_format($trip->distance_miles ?? 0, 1) ?> mi
-                </span>
-                
-                <!-- Vehicle -->
-                <span class="detail-badge vehicle-badge" title="Vehicle: <?= ucfirst($trip->vehicle_type ?? 'Standard') ?>">
-                    <i data-lucide="car-front" width="12"></i> <?= ucfirst(substr($trip->vehicle_type ?? 'Std', 0, 8)) ?>
-                </span>
-                
-                <!-- Dispute Warnings -->
-                <?php if(isset($trip->dispute) && $trip->dispute): ?>
-                    <span class="detail-badge" style="background:rgba(239, 68, 68, 0.1); color:var(--danger); border-color:transparent;" title="Active Dispute">
-                        <i data-lucide="alert-triangle" width="12"></i> Dispute #<?= $trip->dispute->id ?>
-                    </span>
-                <?php endif; ?>
-                <?php if(isset($trip->linked_dispute) && $trip->linked_dispute): ?>
-                    <span class="detail-badge" style="background:rgba(59, 130, 246, 0.1); color:var(--info); border-color:transparent;" title="Linked Delivery/Return Trip">
-                        <i data-lucide="package" width="12"></i> Linked RTN
-                    </span>
-                <?php endif; ?>
-            </div>
+        <div style="display:flex; gap:6px; margin-top:8px;">
+            <span style="font-size:0.75rem; background:#f1f5f9; color:var(--text-gray); padding:2px 8px; border-radius:4px;"><i data-lucide="navigation" width="12"></i> <?= number_format($trip->distance_miles ?? 0, 1) ?> mi</span>
+            <span style="font-size:0.75rem; background:#e0f2fe; color:#0284c7; padding:2px 8px; border-radius:4px;"><i data-lucide="car-front" width="12"></i> <?= ucfirst(substr($trip->vehicle_type ?? 'Std', 0, 8)) ?></span>
+            <?php if(isset($trip->dispute) && $trip->dispute): ?>
+                <span style="font-size:0.75rem; background:#fee2e2; color:#ef4444; padding:2px 8px; border-radius:4px;"><i data-lucide="alert-triangle" width="12"></i> Dispute</span>
+            <?php endif; ?>
         </div>
-
-        <!-- 3. Customer & Driver Info -->
-        <div>
-            <div style="font-weight:600; font-size:0.875rem; margin-bottom:4px; display:flex; align-items:center; gap:6px; color: var(--text-primary);">
-                <i data-lucide="user" width="14" style="color:var(--text-secondary)"></i> 
-                <span><?= esc($trip->c_first ?? 'Guest') ?></span>
-                <?php if(isset($trip->c_wallet_balance)): ?>
-                    <span style="font-size:0.65rem; background:rgba(16, 185, 129, 0.1); color:var(--success); padding:2px 6px; border-radius:12px; font-weight:700;" title="Customer Wallet Balance">
-                        $<?= number_format($trip->c_wallet_balance, 2) ?>
-                    </span>
-                <?php endif; ?>
-                <?php if(!empty($trip->passengers)): ?>
-                    <span style="color:var(--text-secondary); font-size:0.7rem; background: var(--bg-body); padding: 1px 4px; border-radius: 4px;" title="Passengers">
-                        <?= $trip->passengers ?>
-                    </span>
-                <?php endif; ?>
-            </div>
-            <div style="font-size:0.8rem; color:var(--text-secondary); display:flex; align-items:center; gap:6px;">
-                <i data-lucide="steering-wheel" width="14"></i>
-                <?php if($trip->d_first): ?>
-                    <span style="color:var(--text-primary); font-weight: 500;"><?= esc($trip->d_first) ?></span>
-                    <?php if(isset($trip->d_wallet_balance)): ?>
-                        <span style="font-size:0.65rem; background:rgba(59, 130, 246, 0.1); color:var(--info); padding:2px 6px; border-radius:12px; font-weight:700;" title="Driver Wallet Balance">
-                            $<?= number_format($trip->d_wallet_balance, 2) ?>
-                        </span>
-                    <?php endif; ?>
-                <?php else: ?>
-                    <span style="color:var(--warning); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.02em;">Unassigned</span>
-                <?php endif; ?>
-            </div>
+    </td>
+    <td>
+        <div style="font-weight:600; color:var(--text-dark); margin-bottom:6px; display:flex; align-items:center; gap:6px;">
+            <i data-lucide="user" width="14" class="text-muted"></i> 
+            <span><?= esc($trip->c_first ?? 'Guest') ?></span>
+            <?php if(!empty($trip->passengers)): ?>
+                <span style="color:var(--text-gray); font-size:0.7rem; background:#f1f5f9; padding:2px 6px; border-radius:4px;" title="Passengers"><?= $trip->passengers ?></span>
+            <?php endif; ?>
         </div>
-        <!-- 4. Price Column -->
-        <div style="text-align:right; min-width: 90px;">
-            <div style="font-size: 1.15rem; font-weight: 800; color: var(--info); letter-spacing: -0.02em;">
-                $<?= number_format($trip->fare_amount ?? 0, 2) ?>
-            </div>
-            <div style="font-size: 0.65rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600; margin-top: 2px; display: flex; align-items: center; justify-content: flex-end; gap: 4px;">
-                <i data-lucide="credit-card" width="10"></i>
-                <?= esc($trip->payment_method ?? 'Cash') ?>
-            </div>
+        <div class="text-muted" style="display:flex; align-items:center; gap:6px;">
+            <i data-lucide="steering-wheel" width="14"></i> 
+            <?php if($trip->d_first): ?>
+                <span style="color:var(--text-dark); font-weight:500;"><?= esc($trip->d_first) ?></span>
+            <?php else: ?>
+                <span style="color:#f59e0b; font-weight:600; font-size:0.75rem; text-transform:uppercase;">Unassigned</span>
+            <?php endif; ?>
         </div>
-
-        <!-- 5. Action Column -->
-        <div style="text-align:right; display:flex; align-items:center; justify-content:flex-end; gap:6px;">
+    </td>
+    <td>
+        <div style="font-size: 1.15rem; font-weight: 700; color: #0284c7; margin-bottom:2px;">$<?= number_format($trip->fare_amount ?? 0, 2) ?></div>
+        <div class="text-muted" style="text-transform:uppercase; font-size:0.75rem; display:flex; align-items:center; gap:4px;"><i data-lucide="credit-card" width="12"></i> <?= esc($trip->payment_method ?? 'Cash') ?></div>
+    </td>
+    <td onclick="event.stopPropagation()">
+        <div style="display:flex; align-items:center; gap:6px;">
             <?php if($type == 'queue' && !$trip->driver_id): ?>
-                <button onclick="event.stopPropagation(); openAssignModal(<?= $trip->id ?>)" class="btn-xs btn-primary">Assign</button>
+                <button onclick="event.stopPropagation(); openAssignModal(<?= $trip->id ?>)" style="background:var(--primary-blue); color:white; border:none; padding:6px 12px; border-radius:6px; font-weight:600; cursor:pointer;">Assign</button>
             <?php else: ?>
                 <div class="dropdown" style="position:relative; display:inline-block;">
-                    <button class="btn-xs btn-outline" onclick="event.stopPropagation(); toggleDropdown(this)" style="display:flex; align-items:center; gap:4px; padding:4px 8px;">
-                        Actions <i data-lucide="chevron-down" width="12"></i>
+                    <button class="btn-outline-action" onclick="event.stopPropagation(); toggleDropdown(this)" style="padding:6px 10px; font-size:0.85rem;">
+                        Actions <i data-lucide="chevron-down" width="14"></i>
                     </button>
-                    <div class="dropdown-menu" style="right:0; top:100%; min-width:140px;">
-                        <!-- Status Actions -->
+                    <div class="dropdown-menu" style="right:0; top:100%; min-width:160px; padding:4px 0;">
                         <?php if(in_array($trip->status, ['active', 'dispatching'])): ?>
-                            <button onclick="event.stopPropagation(); window.updateTripStatus(<?= $trip->id ?>, 'completed')" class="dropdown-item text-success">
-                                <i data-lucide="check-circle" width="14" style="color:var(--success)"></i> Mark Complete
+                            <button onclick="event.stopPropagation(); window.updateTripStatus(<?= $trip->id ?>, 'completed')" class="dropdown-item" style="color:#16a34a;">
+                                <i data-lucide="check-circle" width="14"></i> Mark Complete
                             </button>
                         <?php endif; ?>
                         <?php if(!in_array($trip->status, ['completed', 'cancelled'])): ?>
                             <button onclick="event.stopPropagation(); window.updateTripStatus(<?= $trip->id ?>, 'cancelled')" class="dropdown-item text-danger">
-                                <i data-lucide="x-circle" width="14" style="color:var(--danger)"></i> Cancel Trip
+                                <i data-lucide="x-circle" width="14"></i> Cancel Trip
                             </button>
                         <?php endif; ?>
 
                         <?php if($trip->status != 'cancelled'): ?>
-                            <div style="border-top:1px solid var(--border-color); margin:4px 0;"></div>
-                            
-                            <!-- Rating Options (Hidden if Cancelled or Already Rated) -->
+                            <div style="border-top:1px solid var(--border-light); margin:4px 0;"></div>
                             <?php if($trip->driver_id && empty($trip->system_rated_driver)): ?>
                                 <button onclick="event.stopPropagation(); window.openRateModal(<?= htmlspecialchars(json_encode($trip)) ?>, 'driver')" class="dropdown-item">
-                                    <i data-lucide="star" width="14" style="color:var(--warning)"></i> Rate Driver
+                                    <i data-lucide="star" width="14" style="color:#eab308"></i> Rate Driver
                                 </button>
                             <?php endif; ?>
                             <?php if($trip->customer_id && empty($trip->system_rated_customer)): ?>
                                 <button onclick="event.stopPropagation(); window.openRateModal(<?= htmlspecialchars(json_encode($trip)) ?>, 'customer')" class="dropdown-item">
-                                    <i data-lucide="star" width="14" style="color:var(--info)"></i> Rate Customer
+                                    <i data-lucide="star" width="14" style="color:#0284c7"></i> Rate Customer
                                 </button>
                             <?php endif; ?>
-                            
-                            <div style="border-top:1px solid var(--border-color); margin:4px 0;"></div>
-                            
-                            <a href="<?= base_url('dispatch/trips/view/'.$trip->id) ?>" class="dropdown-item">
-                                <i data-lucide="eye" width="14"></i> View Details
-                            </a>
-                            <a href="<?= base_url('dispatch/trips/edit/'.$trip->id) ?>" class="dropdown-item">
-                                <i data-lucide="edit-2" width="14"></i> Edit Trip
-                            </a>
+                            <div style="border-top:1px solid var(--border-light); margin:4px 0;"></div>
+                            <a href="<?= base_url('dispatch/trips/view/'.$trip->id) ?>" class="dropdown-item"><i data-lucide="eye" width="14"></i> View Details</a>
+                            <a href="<?= base_url('dispatch/trips/edit/'.$trip->id) ?>" class="dropdown-item"><i data-lucide="edit-2" width="14"></i> Edit Trip</a>
                         <?php else: ?>
-                            <div style="border-top:1px solid var(--border-color); margin:4px 0;"></div>
-                            <a href="<?= base_url('dispatch/trips/view/'.$trip->id) ?>" class="dropdown-item">
-                                <i data-lucide="eye" width="14"></i> View Details
-                            </a>
+                            <div style="border-top:1px solid var(--border-light); margin:4px 0;"></div>
+                            <a href="<?= base_url('dispatch/trips/view/'.$trip->id) ?>" class="dropdown-item"><i data-lucide="eye" width="14"></i> View Details</a>
                         <?php endif; ?>
 
-                        <a href="<?= base_url('dispatch/trips/print/'.$trip->id) ?>" target="_blank" class="dropdown-item">
-                            <i data-lucide="printer" width="14"></i> Print Receipt
-                        </a>
-                        <div style="border-top:1px solid var(--border-color); margin:4px 0;"></div>
-                        <button type="button" onclick="event.stopPropagation(); openDisputeModal(<?= $trip->id ?>, <?= $trip->customer_id ?? 'null' ?>, <?= $trip->driver_id ?? 'null' ?>)" class="dropdown-item text-danger" style="color: var(--danger);">
-                            <i data-lucide="alert-triangle" width="14" style="color:var(--danger)"></i> Dispute Trip
+                        <a href="<?= base_url('dispatch/trips/print/'.$trip->id) ?>" target="_blank" class="dropdown-item"><i data-lucide="printer" width="14"></i> Print Receipt</a>
+                        <div style="border-top:1px solid var(--border-light); margin:4px 0;"></div>
+                        <button type="button" onclick="event.stopPropagation(); openDisputeModal(<?= $trip->id ?>, <?= $trip->customer_id ?? 'null' ?>, <?= $trip->driver_id ?? 'null' ?>)" class="dropdown-item text-danger">
+                            <i data-lucide="alert-triangle" width="14"></i> Dispute Trip
                         </button>
                     </div>
                 </div>
             <?php endif; ?>
-
-            <button class="btn-xs btn-outline" style="padding:4px; height:28px; width:28px; display:flex; align-items:center; justify-content:center;" onclick="event.stopPropagation(); openTripDetailsModal(<?= htmlspecialchars(json_encode($trip)) ?>)" title="Expand Details">
+            <button class="btn-outline-action" style="padding:6px; display:flex; align-items:center; justify-content:center;" onclick="event.stopPropagation(); openTripDetailsModal(<?= htmlspecialchars(json_encode($trip)) ?>)" title="Expand Details">
                 <i data-lucide="maximize-2" width="14"></i>
             </button>
         </div>
-    </div>
-
-    <!-- Expanded Max Details Panel Removed - Now using Modal -->
-</div>
-
-<style>
-    .btn-xs { 
-        padding: 4px 8px; font-size: 0.75rem; border-radius: 4px; border:none; cursor:pointer; font-weight:600; text-decoration:none;
-    }
-    .btn-xs.btn-primary { background: var(--primary); color:white; }
-    .btn-xs.btn-info { background: var(--info); color:white; border:1px solid var(--info); }
-    .btn-xs.btn-info:hover { background: var(--info-hover); }
-    .btn-xs.btn-outline { border:1px solid var(--border-color); color:var(--text-secondary); background:transparent; }
-    .btn-xs.btn-outline:hover { border-color:var(--text-primary); color:var(--text-primary); }
-    /* Detail Badges in Card */
-    .detail-badge {
-        display: inline-flex; align-items: center; gap: 4px;
-        font-size: 0.75rem;
-        background: var(--bg-body);
-        border: 1px solid var(--border-color);
-        padding: 2px 8px;
-        border-radius: 12px;
-        color: var(--text-secondary);
-        font-weight: 500;
-        cursor: help;
-        transition: all 0.15s;
-    }
-    .detail-badge:hover {
-        background: var(--bg-surface-hover);
-        color: var(--text-primary);
-        border-color: var(--primary);
-    }
-    
-    .vehicle-badge { color: var(--info); border-color: rgba(59, 130, 246, 0.2); background: rgba(59, 130, 246, 0.05); }
-    .fare-badge { 
-        color: var(--text-primary); 
-        font-weight: 700; 
-        background: var(--bg-surface); 
-        border-color: var(--primary);
-        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-    }
-</style>
+    </td>
+</tr>

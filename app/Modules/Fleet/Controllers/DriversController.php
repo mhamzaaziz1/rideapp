@@ -74,6 +74,32 @@ class DriversController extends BaseController
         return redirect()->back()->withInput()->with('errors', $this->driverModel->errors());
     }
 
+    public function createAjax()
+    {
+        // Simple rules for modal creation
+        $rules = [
+            'first_name' => 'required|min_length[2]',
+            'last_name'  => 'required|min_length[2]',
+            'phone'      => 'required|min_length[10]',
+        ];
+
+        if (!$this->validate($rules)) {
+            return $this->response->setJSON(['status' => 'error', 'errors' => $this->validator->getErrors()]);
+        }
+
+        $data = $this->request->getPost();
+        $data['status'] = 'active'; // Default active
+        $data['total_trips'] = 0;
+        $data['rating'] = 5.0;
+
+        if ($this->driverModel->insert($data)) {
+            $data['id'] = $this->driverModel->getInsertID();
+            return $this->response->setJSON(['status' => 'success', 'driver' => $data]);
+        }
+
+        return $this->response->setJSON(['status' => 'error', 'message' => 'Failed to create driver']);
+    }
+
     public function edit($id)
     {
         $driver = $this->driverModel->find($id);
