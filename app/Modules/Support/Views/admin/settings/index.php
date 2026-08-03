@@ -105,13 +105,23 @@
                             </div>
                         </div>
 
-                        <div class="api-key-section p-4 border rounded-lg">
+                        <div class="api-key-section mb-4 p-4 border rounded-lg">
                             <div class="d-flex align-items-center mb-3">
                                 <div class="key-icon bg-soft-info"><i class="fas fa-shield-alt"></i></div>
                                 <h6 class="mb-0 font-weight-bold ms-3">Gemini API Key</h6>
                             </div>
                             <div class="form-group-premium">
-                                <input type="password" name="gemini_key" value="<?= esc($settings['gemini_key']) ?>" placeholder="AIza...">
+                                <input type="password" name="gemini_key" value="<?= esc($settings['gemini_key'] ?? '') ?>" placeholder="AIza...">
+                            </div>
+                        </div>
+
+                        <div class="api-key-section p-4 border rounded-lg">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="key-icon bg-soft-success"><i class="fas fa-map-marked-alt"></i></div>
+                                <h6 class="mb-0 font-weight-bold ms-3">Google Maps API Key</h6>
+                            </div>
+                            <div class="form-group-premium">
+                                <input type="password" name="google_maps_key" value="<?= esc($settings['google_maps_key'] ?? '') ?>" placeholder="AIza...">
                             </div>
                         </div>
 
@@ -226,6 +236,7 @@
 .bg-soft-blue { background: #eff6ff; color: #2563eb; }
 .bg-soft-warning { background: #fffbeb; color: #d97706; }
 .bg-soft-info { background: #ecfeff; color: #0891b2; }
+.bg-soft-success { background: #dcfce7; color: #16a34a; }
 
 .btn-primary-premium {
     background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);

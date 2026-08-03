@@ -31,9 +31,18 @@ class SupportSettingsController extends BaseController
         $posted = $this->request->getPost();
         
         foreach ($posted as $key => $value) {
-            $this->db->table('support_settings')
-                ->where('setting_key', $key)
-                ->update(['setting_value' => $value, 'updated_at' => date('Y-m-d H:i:s')]);
+            $exists = $this->db->table('support_settings')->where('setting_key', $key)->countAllResults() > 0;
+            if ($exists) {
+                $this->db->table('support_settings')
+                    ->where('setting_key', $key)
+                    ->update(['setting_value' => $value, 'updated_at' => date('Y-m-d H:i:s')]);
+            } else {
+                $this->db->table('support_settings')->insert([
+                    'setting_key' => $key,
+                    'setting_value' => $value,
+                    'updated_at' => date('Y-m-d H:i:s')
+                ]);
+            }
         }
 
         return redirect()->to(base_url('admin/support/settings'))->with('success', 'AI Settings updated successfully.');
