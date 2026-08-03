@@ -17,6 +17,7 @@
 *   **Driver Bank Cheque Generation:** Print-ready, MICR-styled physical cheque generation for driver wallet payouts.
 
 ### ⚙️ System & Admin Enhancements
+*   **Google Maps Places Autocomplete for SMS:** Upgraded the SMS chatbot (`TripManipulationService`) to natively use the Google Places Autocomplete API instead of the standard Geocoding API. This enables customers to input partial addresses via text message and intelligently receive highly accurate, verified address suggestions. *(Note: Because this is a backend service, the Google Maps API Key must be secured using **IP Address Restrictions** rather than HTTP Referer Restrictions, as Google blocks referer-restricted keys for server-to-server calls).*
 *   **Google Maps Integration:** As an alternative to OpenStreetMap, the system now natively supports Google Maps via an API Key configuration in the Settings module. When enabled, dispatch and trip views dynamically render interactive Google Maps with real-time Traffic Layer overlays, custom SVG markers, and rich POI styling directly into the CRM.
 *   **Dynamic App Settings:** Company name, address, tax rate, and other variables are stored in `settings.json` and dynamically injected into all printable receipts, cheques, and statements.
 *   **Driver Commission Rates:** Support for individualized driver commission percentages that automatically split trip fares into company profit and driver earnings.

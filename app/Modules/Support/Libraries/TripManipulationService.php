@@ -128,6 +128,10 @@ class TripManipulationService
         if ($state === 'booking_ask_pickup') {
             $addresses = $this->geocodeAddress($cleanMessage);
             
+            if ($addresses === false) {
+                return "API Problem: The Google Maps API key is not configured correctly or is restricted.";
+            }
+
             if (empty($addresses)) {
                 return "We couldn't find that address. Please try typing it again.";
             }
@@ -184,6 +188,10 @@ class TripManipulationService
         if ($state === 'booking_ask_dropoff') {
             $addresses = $this->geocodeAddress($cleanMessage);
             
+            if ($addresses === false) {
+                return "API Problem: The Google Maps API key is not configured correctly or is restricted.";
+            }
+
             if (empty($addresses)) {
                 return "We couldn't find that address. Please try typing it again.";
             }
@@ -507,20 +515,28 @@ class TripManipulationService
             ];
         }
 
-        $url = 'https://maps.googleapis.com/maps/api/geocode/json?address=' . urlencode($query) . '&key=' . $apiKey;
+        // Use Places Autocomplete API instead of Geocode API for better partial text suggestions
+        $url = 'https://maps.googleapis.com/maps/api/place/autocomplete/json?input=' . urlencode($query) . '&key=' . $apiKey;
         $response = @file_get_contents($url);
         
         if (!$response) return [$query];
 
         $data = json_decode($response, true);
-        if (empty($data['results'])) {
+        
+        // Handle API key restriction errors gracefully
+        if (isset($data['status']) && $data['status'] === 'REQUEST_DENIED') {
+            log_message('error', 'Google Maps API Error: ' . ($data['error_message'] ?? 'Request denied'));
+            return false;
+        }
+
+        if (empty($data['predictions'])) {
             return [];
         }
 
         $formattedAddresses = [];
-        foreach ($data['results'] as $index => $result) {
+        foreach ($data['predictions'] as $index => $prediction) {
             if ($index >= 3) break; // Limit to top 3
-            $formattedAddresses[] = $result['formatted_address'];
+            $formattedAddresses[] = $prediction['description'];
         }
 
         return array_unique($formattedAddresses);
