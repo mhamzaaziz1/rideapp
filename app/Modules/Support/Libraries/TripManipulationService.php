@@ -128,8 +128,8 @@ class TripManipulationService
         if ($state === 'booking_ask_pickup') {
             $addresses = $this->geocodeAddress($cleanMessage);
             
-            if ($addresses === false) {
-                return "API Problem: The Google Maps API key is not configured correctly or is restricted.";
+            if (isset($addresses['error'])) {
+                return "API Problem: " . $addresses['error'];
             }
 
             if (empty($addresses)) {
@@ -188,8 +188,8 @@ class TripManipulationService
         if ($state === 'booking_ask_dropoff') {
             $addresses = $this->geocodeAddress($cleanMessage);
             
-            if ($addresses === false) {
-                return "API Problem: The Google Maps API key is not configured correctly or is restricted.";
+            if (isset($addresses['error'])) {
+                return "API Problem: " . $addresses['error'];
             }
 
             if (empty($addresses)) {
@@ -525,8 +525,9 @@ class TripManipulationService
         
         // Handle API key restriction errors gracefully
         if (isset($data['status']) && $data['status'] === 'REQUEST_DENIED') {
-            log_message('error', 'Google Maps API Error: ' . ($data['error_message'] ?? 'Request denied'));
-            return false;
+            $errorMsg = $data['error_message'] ?? 'Request denied';
+            log_message('error', 'Google Maps API Error: ' . $errorMsg);
+            return ['error' => $errorMsg];
         }
 
         if (empty($data['predictions'])) {
